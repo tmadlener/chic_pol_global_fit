@@ -4,17 +4,50 @@
 #include "data_structures.h"
 #include "constants.h"
 #include "likelihood_helpers.h"
+#include "simple_compile_time_map.h"
 
 #include "Fit/ParameterSettings.h"
 
 #include <vector>
 #include <array>
 #include <utility>
-#include <algorithm>
-#include <iostream>
-#include <functional>
 #include <string>
-#include <unordered_map>
+
+constexpr std::array<ParameterIndex, 20> PARAMETERS = {{
+    {"sigma_psip",  0},
+    {"sigma_chic2", 1},
+    {"sigma_chic1", 2},
+    {"sigma_jpsi", 3},
+
+    {"f_ppsi", 4},
+
+    {"gamma",  5},
+    {"beta_u", 6},
+    {"beta_p", 7},
+    {"beta_c1", 8},
+    {"beta_c2", 9},
+
+    {"br_psip_dp", 10},
+    {"br_psip_mm", 11},
+    {"br_psip_c2", 12},
+    {"br_psip_c1", 13},
+    {"br_psip_jpsi", 14},
+    {"br_c2_jpsi", 15},
+    {"br_c1_jpsi", 16},
+    {"br_jpsi_mm", 17},
+
+    {"L_CMS", 18},
+    {"L_ATLAS", 19}
+  }};
+
+/**
+ * Convenience overload
+ */
+static constexpr int IPAR(const char* name)
+{
+  return getParIdx(PARAMETERS, name);
+}
+
 
 using ParamsSettings = std::vector<ROOT::Fit::ParameterSettings>;
 
@@ -58,6 +91,14 @@ private:
   void defineStartParams();
 
   /**
+   * Set a parameter in the m_startParams vector.
+   * This is just a thin wrapper for slightly less typing and better readability
+   */
+  template<class... Args>
+  void setParam(const char* name, Args&&... args)
+  { m_startParams[IPAR(name)] = ROOT::Fit::ParameterSettings(name, args...); }
+
+  /**
    * add all the nuissance parameters
    */
   void addNuissances();
@@ -80,9 +121,8 @@ private:
   PolarizationMeasurement m_psi2S_CMS_pol;
   PolarizationMeasurement m_jpsi_CMS_pol;
 
-  ParamsSettings m_startParams;
+  ParamsSettings m_startParams{mapSize(PARAMETERS)}; // default initialize
   std::vector<std::pair<int, NuissanceParameter>> m_nuissParams;
-  std::unordered_map<std::string, int> m_parNamesIdcs;
 };
 
 
@@ -90,68 +130,93 @@ double GlobalLikelihood::operator()(const double* p) const
 {
   double loglike = 0;
 
-  CSModel psi2SXSecModel = [&p] (double ptm) {
-    return sig_dir(ptm, p[0], p[4], p[7], p[6], p[5]);
+  // pulling the different parameters out of the p pointer here to guarantee, that the call
+  // to IPAR is evaluated at compile time
+  const double sigma_psip = p[IPAR("sigma_psip")];
+  const double f_ppsi = p[IPAR("f_ppsi")];
+  const double beta_p = p[IPAR("beta_p")];
+  const double beta_u = p[IPAR("beta_u")];
+  const double gamma = p[IPAR("gamma")];
+  const double L_CMS = p[IPAR("L_CMS")];
+  const double L_ATLAS = p[IPAR("L_ATLAS")];
+  const double br_psip_mm = p[IPAR("br_psip_mm")];
+  const double br_psip_dp = p[IPAR("br_psip_dp")];
+  const double br_jpsi_mm = p[IPAR("br_jpsi_mm")];
+
+  CSModel psi2SXSecModel = [sigma_psip, f_ppsi, beta_p, beta_u, gamma] (double ptm) {
+    return sig_dir(ptm, sigma_psip, f_ppsi, beta_p, beta_u, gamma);
   };
-  auto psi2SPolModel = [&p] (double ptm) {
-    return lambdathPsi(ptm, p[4], p[6], p[7], p[5]);
+  auto psi2SPolModel = [sigma_psip, f_ppsi, beta_p, beta_u, gamma] (double ptm) {
+    return lambdathPsi(ptm, f_ppsi, beta_u, beta_p, gamma);
   };
 
   loglike += psi2SCrossSection(m_psi2S_CMS_cs, psi2SXSecModel, psi2SPolModel,
-                               p[18], p[11]);
+                               L_CMS, br_psip_mm);
 
   loglike += psi2SCrossSection(m_psi2S_ATLAS_cs, psi2SXSecModel, psi2SPolModel,
-                               p[19], p[10] * p[17]);
+                               L_ATLAS, br_psip_dp * br_jpsi_mm);
 
-  CSModel chic2XSecModel = [&p] (double ptm) {
-    return sig_dir(ptm, p[1], 1.0, p[9], p[6], p[5]);
+
+  const double sigma_chic2 = p[IPAR("sigma_chic2")];
+  const double beta_c2 = p[IPAR("beta_c2")];
+  const double br_c2_jpsi = p[IPAR("br_c2_jpsi")];
+  const double br_psip_c2 = p[IPAR("br_psip_c2")];
+
+  CSModel chic2XSecModel = [sigma_chic2, beta_u, beta_c2, gamma] (double ptm) {
+    return sig_dir(ptm, sigma_chic2, 1.0, beta_c2, beta_u, gamma);
   };
-  ChiPolModel chic2PolModel = [&p, psi2SPolModel] (double ptm, double fdir) {
-    return lambdathChic2(ptm, psi2SPolModel(ptm), fdir, 1.0, p[6], p[9], p[5]);
+  ChiPolModel chic2PolModel = [beta_u, beta_c2, gamma, psi2SPolModel] (double ptm, double fdir) {
+    return lambdathChic2(ptm, psi2SPolModel(ptm), fdir, 1.0, beta_u, beta_c2, gamma);
   };
 
   loglike += chicCrossSection(m_chic2_ATLAS_cs, psi2SXSecModel, chic2XSecModel, chic2PolModel,
-                              p[19], p[12], p[15] * p[17], B_PSIP_CHIC2[0], M_CHIC2);
+                              L_ATLAS, br_psip_c2, br_c2_jpsi * br_jpsi_mm, B_PSIP_CHIC2[0], M_CHIC2);
 
+  const double sigma_chic1 = p[IPAR("sigma_chic1")];
+  const double beta_c1 = p[IPAR("beta_c1")];
+  const double br_c1_jpsi = p[IPAR("br_c1_jpsi")];
+  const double br_psip_c1 = p[IPAR("br_psip_c1")];
 
-  CSModel chic1XSecModel = [&p] (double ptm) {
-    return sig_dir(ptm, p[2], 1.0, p[8], p[6], p[5]);
+  CSModel chic1XSecModel = [sigma_chic1, beta_u, beta_c1, gamma] (double ptm) {
+    return sig_dir(ptm, sigma_chic1, 1.0, beta_c1, beta_u, gamma);
   };
-  ChiPolModel chic1PolModel = [&p, psi2SPolModel] (double ptm, double fdir) {
-    return lambdathChic1(ptm, psi2SPolModel(ptm), fdir, 1.0, p[6], p[8], p[5]);
+  ChiPolModel chic1PolModel = [beta_c1, beta_u, gamma, psi2SPolModel] (double ptm, double fdir) {
+    return lambdathChic1(ptm, psi2SPolModel(ptm), fdir, 1.0, beta_u, beta_c1, gamma);
   };
 
   loglike += chicCrossSection(m_chic1_ATLAS_cs, psi2SXSecModel, chic1XSecModel, chic1PolModel,
-                              p[19], p[13], p[16] * p[17], B_PSIP_CHIC1[0], M_CHIC1);
+                              L_ATLAS, br_psip_c1, br_c1_jpsi * br_jpsi_mm, B_PSIP_CHIC1[0], M_CHIC1);
 
+  const double sigma_jpsi = p[IPAR("sigma_jpsi")];
+  const double br_psip_jpsi = p[IPAR("br_psip_jpsi")];
 
-  CSModel jpsiXSecModel = [&p] (double ptm) {
-    return sig_dir(ptm, p[3], p[4], p[7], p[6], p[5]);
+  CSModel jpsiXSecModel = [sigma_jpsi, f_ppsi, beta_p, beta_u, gamma] (double ptm) {
+    return sig_dir(ptm, sigma_jpsi, f_ppsi, beta_p, beta_u, gamma);
   };
-  JpsiPolModel jpsiPolModel = [&p, psi2SPolModel, chic1PolModel, chic2PolModel]
+  JpsiPolModel jpsiPolModel = [psi2SPolModel, chic1PolModel, chic2PolModel]
     (double ptm, double fdirPsiChi1, double fdirPsiChi2, double fpsi, double fchi1, double fchi2) {
     return lambdaJpsi(psi2SPolModel(ptm), chic1PolModel(ptm, fdirPsiChi1), chic2PolModel(ptm, fdirPsiChi2),
                       fpsi, fchi1, fchi2);
   };
 
   loglike += jpsiCrossSection(m_jpsi_CMS_cs, psi2SXSecModel, chic1XSecModel, chic2XSecModel, jpsiXSecModel, jpsiPolModel,
-                              p[13], p[12], p[14], p[16], p[15], p[17], p[18]);
+                              br_psip_c1, br_psip_c2, br_psip_jpsi, br_c1_jpsi, br_c2_jpsi, br_jpsi_mm, L_CMS);
 
 
   loglike += chicCrossSectionRatio(m_chic_ratio_CMS_cs, psi2SXSecModel, chic1XSecModel, chic2XSecModel,
-                                   chic1PolModel, chic2PolModel, p[13], p[12]);
+                                   chic1PolModel, chic2PolModel, br_psip_c1, br_psip_c2);
 
 
   loglike += psi2SPolarization(m_psi2S_CMS_pol, psi2SPolModel);
 
   loglike += jpsiPolarization(m_jpsi_CMS_pol, jpsiPolModel, psi2SXSecModel, chic1XSecModel, chic2XSecModel, jpsiXSecModel,
-                              p[13], p[12], p[14], p[16], p[15]);
+                              br_psip_c1, br_psip_c2, br_psip_jpsi, br_c1_jpsi, br_c2_jpsi);
 
   for (const auto& nuissPar : m_nuissParams) {
     loglike += nuissPar.second(p[nuissPar.first]);
   }
 
-  return -2 * loglike;
+  return -2 *loglike;
 }
 
 void GlobalLikelihood::setupFit()
@@ -163,34 +228,30 @@ void GlobalLikelihood::setupFit()
 
 void GlobalLikelihood::defineStartParams()
 {
-  m_startParams.emplace_back("sigma_psip", 24.81, 3);
-  m_startParams.emplace_back("sigma_chic2", 84.25, 7);
-  m_startParams.emplace_back("sigma_chic1", 104.48, 10);
-  m_startParams.emplace_back("sigma_jpsi", 116.9, 10);
+  setParam("sigma_psip", 24.81, 3);
+  setParam("sigma_chic2", 84.25, 7);
+  setParam("sigma_chic1", 104.48, 10);
+  setParam("sigma_jpsi", 116.9, 10);
 
-  m_startParams.emplace_back("f_ppsi", 0.02, 0.5, 0, 1);
+  setParam("f_ppsi", 0.02, 0.5, 0, 1);
 
-  m_startParams.emplace_back("gamma", 0.74, 0.1);
-  m_startParams.emplace_back("beta_u", 3.3, 0.01);
-  m_startParams.emplace_back("beta_p", 2.7, 0.01);
-  m_startParams.emplace_back("beta_c1", 3.3, 0.1);
-  m_startParams.emplace_back("beta_c2", 3.3, 0.1);
+  setParam("gamma", 0.74, 0.1);
+  setParam("beta_u", 3.3, 0.01);
+  setParam("beta_p", 2.7, 0.01);
+  setParam("beta_c1", 3.3, 0.1);
+  setParam("beta_c2", 3.3, 0.1);
 
-  m_startParams.emplace_back("br_psip_dp", 1, 0.01);
-  m_startParams.emplace_back("br_psip_mm", 1, 0.01);
-  m_startParams.emplace_back("br_psip_c2", 1, 0.01);
-  m_startParams.emplace_back("br_psip_c1", 1, 0.01);
-  m_startParams.emplace_back("br_psip_jpsi", 1, 0.01);
-  m_startParams.emplace_back("br_c2_jpsi", 1, 0.01);
-  m_startParams.emplace_back("br_c1_jpsi", 1, 0.01);
-  m_startParams.emplace_back("br_jpsi_mm", 1, 0.01);
+  setParam("br_psip_dp", 1, 0.01);
+  setParam("br_psip_mm", 1, 0.01);
+  setParam("br_psip_c2", 1, 0.01);
+  setParam("br_psip_c1", 1, 0.01);
+  setParam("br_psip_jpsi", 1, 0.01);
+  setParam("br_c2_jpsi", 1, 0.01);
+  setParam("br_c1_jpsi", 1, 0.01);
+  setParam("br_jpsi_mm", 1, 0.01);
 
-  m_startParams.emplace_back("L_CMS", 1, 0.01);
-  m_startParams.emplace_back("L_ATLAS", 1, 0.01);
-
-  for (size_t i = 0; i < m_startParams.size(); ++i) {
-    // m_parNamesIdcs
-  }
+  setParam("L_CMS", 1, 0.01);
+  setParam("L_ATLAS", 1, 0.01);
 }
 
 void GlobalLikelihood::addNuissances()
@@ -216,17 +277,8 @@ void GlobalLikelihood::setupContributions()
 template<typename T>
 void GlobalLikelihood::addNuissanceParameter(const std::string& name, const T& par)
 {
-  const auto it = std::find_if(m_startParams.cbegin(), m_startParams.cend(),
-                               [&name] (const ROOT::Fit::ParameterSettings& param) {
-                                 return param.Name() == name;
-                               });
-
-  if (it != m_startParams.cend()) {
-    auto index = std::distance(m_startParams.cbegin(), it);
-    m_nuissParams.push_back({index, {par}});
-  } else {
-    std::cerr << "Problem when adding nuissance parameter: " << name << '\n';
-  }
+  const auto index = IPAR(name.c_str());
+  m_nuissParams.push_back({index, {par}});
 }
 
 #endif
