@@ -23,10 +23,10 @@ double norm_plaw(double x, double beta, double gamma, double xnorm=PTMNORM)
   return power_law(x, beta, gamma) / power_law(xnorm, beta, gamma);
 }
 
-double sig_dir(double ptm, double sig, double f_pol, double beta_pol, double beta_unpol, double gamma)
+double sig_dir(double ptm, double sig, double fLong, double betaLong, double betaTrans, double gamma)
 {
-  return sig * ((1 - f_pol) * norm_plaw(ptm, beta_unpol, gamma) +
-                f_pol * norm_plaw(ptm, beta_pol, gamma));
+  return sig * ((1 - fLong) * norm_plaw(ptm, betaTrans, gamma) +
+                fLong * norm_plaw(ptm, betaLong, gamma));
 }
 
 /**
@@ -56,34 +56,31 @@ double weightedLambda(const double lambda1, const double lambda2, const double w
   return weightedLambda({lambda1, lambda2}, {w1, w2});
 }
 
-
-double lambdathPsi(double ptm, double fpol, double beta_u, double beta_p, double gamma)
+/**
+ * lambda theta assuming a fully transverse and a fully longitudinal component
+ * given the fraction of the longitudinal component
+ */
+double lambdath(const double fLong)
 {
-  return weightedLambda(1, 0,
-                        fpol * norm_plaw(ptm, beta_p, gamma),
-                        (1 - fpol) * norm_plaw(ptm, beta_u, gamma));
+  return (1 - 3 * fLong) / (1 + fLong);
 }
 
-double lambdathChic1(double ptm, double lambdapsi, double fdir, double fpol,
-                     double beta_u, double beta_p, double gamma)
+/**
+ * ptm dependent lambda theta from the shape parameters of the two components and the longitudinal
+ * fraction at a given reference point
+ */
+double lambdaTheta(double ptm, double fLong, double betaLong, double betaTrans, double gamma)
 {
-  const double lambda_chi_dir = weightedLambda(1. / 5. + 0.69 * std::exp(-std::pow(ptm / 9.97, 1.28)),
-                                               0,
-                                               fpol * norm_plaw(ptm, beta_p, gamma),
-                                               (1 - fpol) * norm_plaw(ptm, beta_u, gamma));
+  const double contLong = fLong * norm_plaw(ptm, betaLong, gamma);
+  const double contTrans = (1 - fLong) * norm_plaw(ptm, betaTrans, gamma);
 
-  return weightedLambda(lambda_chi_dir, lambdapsi / (4 + lambdapsi), fdir, 1 - fdir);
+  return lambdath(contLong / (contLong + contTrans));
 }
 
-double lambdathChic2(double ptm, double lambdapsi, double fdir, double fpol,
-                     double beta_u, double beta_p, double gamma)
+double lambdaChic(double ptm, double fLong, double betaLong, double betaTrans, double gamma, double lambdaPsi, double fDir)
 {
-  const double lambda_chi_dir = weightedLambda(21. / 73. - 1.02 * std::exp(-std::pow(ptm / 9.31, 1.15)),
-                                               0,
-                                               fpol * norm_plaw(ptm, beta_p, gamma),
-                                               (1 - fpol) * norm_plaw(ptm, beta_u, gamma));
-
-  return weightedLambda(lambda_chi_dir, (21 * lambdapsi) / (60 + 13 * lambdapsi), fdir, 1 - fdir);
+  const double lambdaChiDir = lambdaTheta(ptm, fLong, betaLong, betaTrans, gamma);
+  return weightedLambda(lambdaChiDir, lambdaPsi / (4 + lambdaPsi), fDir, 1 - fDir);
 }
 
 double lambdaJpsi(double lambdaPsi, double lambdaChic1, double lambdaChic2,

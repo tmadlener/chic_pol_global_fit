@@ -13,31 +13,35 @@
 #include <utility>
 #include <string>
 
-constexpr std::array<ParameterIndex, 20> PARAMETERS = {{
+constexpr std::array<ParameterIndex, 24> PARAMETERS = {{
     {"sigma_psip",  0},
     {"sigma_chic2", 1},
     {"sigma_chic1", 2},
     {"sigma_jpsi", 3},
 
-    {"f_ppsi", 4},
+    {"f_long_psi", 4},
+    {"f_long_c1", 5},
+    {"f_long_c2", 6},
 
-    {"gamma",  5},
-    {"beta_u", 6},
-    {"beta_p", 7},
-    {"beta_c1", 8},
-    {"beta_c2", 9},
+    {"gamma", 7},
+    {"beta_long_psi", 8},
+    {"beta_trans_psi", 9},
+    {"beta_long_c1", 10},
+    {"beta_trans_c1", 11},
+    {"beta_long_c2", 12},
+    {"beta_trans_c2", 13},
 
-    {"br_psip_dp", 10},
-    {"br_psip_mm", 11},
-    {"br_psip_c2", 12},
-    {"br_psip_c1", 13},
-    {"br_psip_jpsi", 14},
-    {"br_c2_jpsi", 15},
-    {"br_c1_jpsi", 16},
-    {"br_jpsi_mm", 17},
+    {"br_psip_dp", 14},
+    {"br_psip_mm", 15},
+    {"br_psip_c2", 16},
+    {"br_psip_c1", 17},
+    {"br_psip_jpsi", 18},
+    {"br_c2_jpsi", 19},
+    {"br_c1_jpsi", 20},
+    {"br_jpsi_mm", 21},
 
-    {"L_CMS", 18},
-    {"L_ATLAS", 19}
+    {"L_CMS", 22},
+    {"L_ATLAS", 23}
   }};
 
 /**
@@ -133,9 +137,9 @@ double GlobalLikelihood::operator()(const double* p) const
   // pulling the different parameters out of the p pointer here to guarantee, that the call
   // to IPAR is evaluated at compile time
   const double sigma_psip = p[IPAR("sigma_psip")];
-  const double f_ppsi = p[IPAR("f_ppsi")];
-  const double beta_p = p[IPAR("beta_p")];
-  const double beta_u = p[IPAR("beta_u")];
+  const double f_long_psi = p[IPAR("f_long_psi")];
+  const double beta_trans_psi = p[IPAR("beta_trans_psi")];
+  const double beta_long_psi = p[IPAR("beta_long_psi")];
   const double gamma = p[IPAR("gamma")];
   const double L_CMS = p[IPAR("L_CMS")];
   const double L_ATLAS = p[IPAR("L_ATLAS")];
@@ -143,11 +147,11 @@ double GlobalLikelihood::operator()(const double* p) const
   const double br_psip_dp = p[IPAR("br_psip_dp")];
   const double br_jpsi_mm = p[IPAR("br_jpsi_mm")];
 
-  CSModel psi2SXSecModel = [sigma_psip, f_ppsi, beta_p, beta_u, gamma] (double ptm) {
-    return sig_dir(ptm, sigma_psip, f_ppsi, beta_p, beta_u, gamma);
+  CSModel psi2SXSecModel = [sigma_psip, f_long_psi, beta_trans_psi, beta_long_psi, gamma] (double ptm) {
+    return sig_dir(ptm, sigma_psip, f_long_psi, beta_long_psi, beta_trans_psi, gamma);
   };
-  auto psi2SPolModel = [sigma_psip, f_ppsi, beta_p, beta_u, gamma] (double ptm) {
-    return lambdathPsi(ptm, f_ppsi, beta_u, beta_p, gamma);
+  auto psi2SPolModel = [f_long_psi, beta_trans_psi, beta_long_psi, gamma] (double ptm) {
+    return lambdaTheta(ptm, f_long_psi, beta_long_psi, beta_trans_psi, gamma);
   };
 
   loglike += psi2SCrossSection(m_psi2S_CMS_cs, psi2SXSecModel, psi2SPolModel,
@@ -158,30 +162,36 @@ double GlobalLikelihood::operator()(const double* p) const
 
 
   const double sigma_chic2 = p[IPAR("sigma_chic2")];
-  const double beta_c2 = p[IPAR("beta_c2")];
+  const double beta_long_c2 = p[IPAR("beta_long_c2")];
+  const double beta_trans_c2 = p[IPAR("beta_trans_c2")];
+  const double f_long_c2 = p[IPAR("f_long_c2")];
   const double br_c2_jpsi = p[IPAR("br_c2_jpsi")];
   const double br_psip_c2 = p[IPAR("br_psip_c2")];
 
-  CSModel chic2XSecModel = [sigma_chic2, beta_u, beta_c2, gamma] (double ptm) {
-    return sig_dir(ptm, sigma_chic2, 1.0, beta_c2, beta_u, gamma);
+  CSModel chic2XSecModel = [sigma_chic2, f_long_c2, beta_long_c2, beta_trans_c2, gamma] (double ptm) {
+    return sig_dir(ptm, sigma_chic2, f_long_c2, beta_long_c2, beta_trans_c2, gamma);
   };
-  ChiPolModel chic2PolModel = [beta_u, beta_c2, gamma, psi2SPolModel] (double ptm, double fdir) {
-    return lambdathChic2(ptm, psi2SPolModel(ptm), fdir, 1.0, beta_u, beta_c2, gamma);
+  ChiPolModel chic2PolModel = [f_long_c2, beta_long_c2, beta_trans_c2, gamma, psi2SPolModel]
+    (double ptm, double fdir) {
+    return lambdaChic(ptm, f_long_c2, beta_long_c2, beta_trans_c2, gamma, psi2SPolModel(ptm), fdir);
   };
 
   loglike += chicCrossSection(m_chic2_ATLAS_cs, psi2SXSecModel, chic2XSecModel, chic2PolModel,
                               L_ATLAS, br_psip_c2, br_c2_jpsi * br_jpsi_mm, B_PSIP_CHIC2[0], M_CHIC2);
 
   const double sigma_chic1 = p[IPAR("sigma_chic1")];
-  const double beta_c1 = p[IPAR("beta_c1")];
+  const double beta_long_c1 = p[IPAR("beta_long_c1")];
+  const double beta_trans_c1 = p[IPAR("beta_trans_c1")];
+  const double f_long_c1 = p[IPAR("f_long_c1")];
   const double br_c1_jpsi = p[IPAR("br_c1_jpsi")];
   const double br_psip_c1 = p[IPAR("br_psip_c1")];
 
-  CSModel chic1XSecModel = [sigma_chic1, beta_u, beta_c1, gamma] (double ptm) {
-    return sig_dir(ptm, sigma_chic1, 1.0, beta_c1, beta_u, gamma);
+  CSModel chic1XSecModel = [sigma_chic1, f_long_c1, beta_long_c1, beta_trans_c1, gamma] (double ptm) {
+    return sig_dir(ptm, sigma_chic1, f_long_c1, beta_long_c1, beta_trans_c1, gamma);
   };
-  ChiPolModel chic1PolModel = [beta_c1, beta_u, gamma, psi2SPolModel] (double ptm, double fdir) {
-    return lambdathChic1(ptm, psi2SPolModel(ptm), fdir, 1.0, beta_u, beta_c1, gamma);
+  ChiPolModel chic1PolModel = [f_long_c1, beta_trans_c1, beta_long_c1, gamma, psi2SPolModel]
+    (double ptm, double fdir) {
+    return lambdaChic(ptm, f_long_c1, beta_long_c1, beta_trans_c1, gamma, psi2SPolModel(ptm), fdir);
   };
 
   loglike += chicCrossSection(m_chic1_ATLAS_cs, psi2SXSecModel, chic1XSecModel, chic1PolModel,
@@ -190,8 +200,8 @@ double GlobalLikelihood::operator()(const double* p) const
   const double sigma_jpsi = p[IPAR("sigma_jpsi")];
   const double br_psip_jpsi = p[IPAR("br_psip_jpsi")];
 
-  CSModel jpsiXSecModel = [sigma_jpsi, f_ppsi, beta_p, beta_u, gamma] (double ptm) {
-    return sig_dir(ptm, sigma_jpsi, f_ppsi, beta_p, beta_u, gamma);
+  CSModel jpsiXSecModel = [sigma_jpsi, f_long_psi, beta_trans_psi, beta_long_psi, gamma] (double ptm) {
+    return sig_dir(ptm, sigma_jpsi, f_long_psi, beta_trans_psi, beta_long_psi, gamma);
   };
   JpsiPolModel jpsiPolModel = [psi2SPolModel, chic1PolModel, chic2PolModel]
     (double ptm, double fdirPsiChi1, double fdirPsiChi2, double fpsi, double fchi1, double fchi2) {
@@ -216,7 +226,7 @@ double GlobalLikelihood::operator()(const double* p) const
     loglike += nuissPar.second(p[nuissPar.first]);
   }
 
-  return -2 *loglike;
+  return -loglike;
 }
 
 void GlobalLikelihood::setupFit()
@@ -233,13 +243,17 @@ void GlobalLikelihood::defineStartParams()
   setParam("sigma_chic1", 104.48, 10);
   setParam("sigma_jpsi", 116.9, 10);
 
-  setParam("f_ppsi", 0.02, 0.5, 0, 1);
+  setParam("f_long_psi", 0.3, 0.1, 0, 1);
+  setParam("f_long_c1", 0.11, 0.1, 0, 1);
+  setParam("f_long_c2", 0.5, 0.1, 0, 1);
 
   setParam("gamma", 0.74, 0.1);
-  setParam("beta_u", 3.3, 0.01);
-  setParam("beta_p", 2.7, 0.01);
-  setParam("beta_c1", 3.3, 0.1);
-  setParam("beta_c2", 3.3, 0.1);
+  setParam("beta_long_psi", 3.3, 0.1);
+  setParam("beta_trans_psi", 3.3, 0.1);
+  setParam("beta_long_c1", 3.3, 0.1);
+  setParam("beta_trans_c1", 3.3, 0.1);
+  setParam("beta_long_c2", 3.3, 0.1);
+  setParam("beta_trans_c2", 3.3, 0.1);
 
   setParam("br_psip_dp", 1, 0.01);
   setParam("br_psip_mm", 1, 0.01);
