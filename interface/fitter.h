@@ -9,15 +9,19 @@ class LikelihoodFitter {
 public:
   LikelihoodFitter() {
     ROOT::Math::MinimizerOptions minOpt;
-    minOpt.SetMinimizerType("Minuit");
+    minOpt.SetMinimizerType("Minuit2");
     minOpt.SetPrintLevel(2);
-
+    minOpt.SetDefaultErrorDef(0.5); // likelihood fit
     fitter.Config().SetMinimizerOptions(minOpt);
+    // fitter.Config().SetMinosErrors(true);
   }
 
 
   template<typename LLH>
   bool Fit(LLH& llh);
+
+  template<typename LLH>
+  TGraph Contour(const LLH& llh, const char* par1, const char* par2, double errLvl=0.5, unsigned int nPoints=25) const;
 
 private:
   ROOT::Fit::Fitter fitter{};
