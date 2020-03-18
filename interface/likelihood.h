@@ -81,7 +81,7 @@ public:
   /**
    * Get the start parameter settings (necessary to pass them to the fitter)
    */
-  ParamsSettings getStartParams() const { return m_startParams; }
+  const ParamsSettings& getStartParams() const { return m_startParams; }
 
 private:
   /**
@@ -106,11 +106,6 @@ private:
    * add all the nuissance parameters
    */
   void addNuissances();
-
-  /**
-   * Setup the partial contributions to the total likelihood
-   */
-  void setupContributions();
 
   template<typename T>
   void addNuissanceParameter(const std::string& name, const T& par);
@@ -281,11 +276,6 @@ void GlobalLikelihood::addNuissances()
 
   addNuissanceParameter("L_CMS", 2.2e-2);
   addNuissanceParameter("L_ATLAS", 1.8e-2);
-}
-
-void GlobalLikelihood::setupContributions()
-{
-  // m_contributions.
 }
 
 template<typename T>
