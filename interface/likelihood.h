@@ -145,16 +145,21 @@ double GlobalLikelihood::operator()(const double* p) const
   CSModel psi2SXSecModel = [sigma_psip, f_long_psi, beta_trans_psi, beta_long_psi, gamma] (double ptm) {
     return sig_dir(ptm, sigma_psip, f_long_psi, beta_long_psi, beta_trans_psi, gamma);
   };
-  auto psi2SPolModel = [f_long_psi, beta_trans_psi, beta_long_psi, gamma] (double ptm) {
+  PolModel psi2SPolModel = [f_long_psi, beta_trans_psi, beta_long_psi, gamma] (double ptm) {
     return lambdaTheta(ptm, f_long_psi, beta_long_psi, beta_trans_psi, gamma);
   };
 
-  loglike += psi2SCrossSection(m_psi2S_CMS_cs, psi2SXSecModel, psi2SPolModel,
-                               L_CMS, br_psip_mm);
+  const Identity<double> id;
 
-  loglike += psi2SCrossSection(m_psi2S_ATLAS_cs, psi2SXSecModel, psi2SPolModel,
-                               L_ATLAS, br_psip_dp * br_jpsi_mm);
+  // psi(2S) CMS
+  loglike += loglikeCrossSection(m_psi2S_CMS_cs,
+                                 {psi2SXSecModel}, {psi2SPolModel}, {id}, {1.0},
+                                 L_CMS * br_psip_mm, M_PSI2S);
 
+  // psi(2S) ATLAS
+  loglike += loglikeCrossSection(m_psi2S_ATLAS_cs,
+                                 {psi2SXSecModel}, {psi2SPolModel}, {id}, {1.0},
+                                 L_ATLAS * br_psip_dp * br_jpsi_mm, M_PSI2S);
 
   const double sigma_chic2 = p[IPAR("sigma_chic2")];
   const double beta_long_c2 = p[IPAR("beta_long_c2")];
@@ -166,13 +171,16 @@ double GlobalLikelihood::operator()(const double* p) const
   CSModel chic2XSecModel = [sigma_chic2, f_long_c2, beta_long_c2, beta_trans_c2, gamma] (double ptm) {
     return sig_dir(ptm, sigma_chic2, f_long_c2, beta_long_c2, beta_trans_c2, gamma);
   };
-  ChiPolModel chic2PolModel = [f_long_c2, beta_long_c2, beta_trans_c2, gamma, psi2SPolModel]
-    (double ptm, double fdir) {
-    return lambdaChic(ptm, f_long_c2, beta_long_c2, beta_trans_c2, gamma, psi2SPolModel(ptm), fdir);
+  PolModel chi2PolModel = [f_long_c2, beta_long_c2, beta_trans_c2, gamma] (double ptm) {
+    return lambdaTheta(ptm, f_long_c2, beta_long_c2, beta_trans_c2, gamma);
   };
 
-  loglike += chicCrossSection(m_chic2_ATLAS_cs, psi2SXSecModel, chic2XSecModel, chic2PolModel,
-                              L_ATLAS, br_psip_c2, br_c2_jpsi * br_jpsi_mm, B_PSIP_CHIC2[0], M_CHIC2);
+  loglike += loglikeCrossSection(m_chic2_ATLAS_cs,
+                                 {chic2XSecModel, psi2SXSecModel}, {chi2PolModel, psi2SPolModel},
+                                 {id, lambdaPsiToChi2}, {1.0, B_PSIP_CHIC2[0] / br_psip_c2},
+                                 L_ATLAS * br_c2_jpsi * br_jpsi_mm, M_CHIC2);
+
+
 
   const double sigma_chic1 = p[IPAR("sigma_chic1")];
   const double beta_long_c1 = p[IPAR("beta_long_c1")];
@@ -184,13 +192,15 @@ double GlobalLikelihood::operator()(const double* p) const
   CSModel chic1XSecModel = [sigma_chic1, f_long_c1, beta_long_c1, beta_trans_c1, gamma] (double ptm) {
     return sig_dir(ptm, sigma_chic1, f_long_c1, beta_long_c1, beta_trans_c1, gamma);
   };
-  ChiPolModel chic1PolModel = [f_long_c1, beta_trans_c1, beta_long_c1, gamma, psi2SPolModel]
-    (double ptm, double fdir) {
-    return lambdaChic(ptm, f_long_c1, beta_long_c1, beta_trans_c1, gamma, psi2SPolModel(ptm), fdir);
+  PolModel chi1PolModel = [f_long_c1, beta_trans_c1, beta_long_c1, gamma] (double ptm) {
+    return lambdaTheta(ptm, f_long_c1, beta_long_c1, beta_trans_c1, gamma);
   };
 
-  loglike += chicCrossSection(m_chic1_ATLAS_cs, psi2SXSecModel, chic1XSecModel, chic1PolModel,
-                              L_ATLAS, br_psip_c1, br_c1_jpsi * br_jpsi_mm, B_PSIP_CHIC1[0], M_CHIC1);
+  loglike += loglikeCrossSection(m_chic1_ATLAS_cs,
+                                 {chic1XSecModel, psi2SXSecModel}, {chi1PolModel, psi2SPolModel},
+                                 {id, lambdaPsiToChi1}, {1.0, B_PSIP_CHIC1[0] / br_psip_c1},
+                                 L_ATLAS * br_c1_jpsi * br_jpsi_mm, M_CHIC1);
+
 
   const double sigma_jpsi = p[IPAR("sigma_jpsi")];
   const double br_psip_jpsi = p[IPAR("br_psip_jpsi")];
@@ -198,28 +208,56 @@ double GlobalLikelihood::operator()(const double* p) const
   CSModel jpsiXSecModel = [sigma_jpsi, f_long_psi, beta_trans_psi, beta_long_psi, gamma] (double ptm) {
     return sig_dir(ptm, sigma_jpsi, f_long_psi, beta_trans_psi, beta_long_psi, gamma);
   };
-  JpsiPolModel jpsiPolModel = [psi2SPolModel, chic1PolModel, chic2PolModel]
-    (double ptm, double fdirPsiChi1, double fdirPsiChi2, double fpsi, double fchi1, double fchi2) {
-    return lambdaJpsi(psi2SPolModel(ptm), chic1PolModel(ptm, fdirPsiChi1), chic2PolModel(ptm, fdirPsiChi2),
-                      fpsi, fchi1, fchi2);
-  };
 
-  loglike += jpsiCrossSection(m_jpsi_CMS_cs, psi2SXSecModel, chic1XSecModel, chic2XSecModel, jpsiXSecModel, jpsiPolModel,
-                              br_psip_c1, br_psip_c2, br_psip_jpsi, br_c1_jpsi, br_c2_jpsi, br_jpsi_mm, L_CMS);
+  // jpsi direct polarization is the same as psi(2S) direct polarization
+  // TODO: make it possible to compose one function that reflects the chi
+  // polarization dependening on pt/M. Currently, we it is necessary to be very
+  // general here and list all the contributions to the j/psi individually,
+  // considering double feed-down accordingly. NOTE: The lambdas are only
+  // affected in the feed-down decay from psi(2S) -> chi
+
+  loglike += loglikeCrossSection(m_jpsi_CMS_cs,
+                                 {jpsiXSecModel, chic1XSecModel, chic2XSecModel, psi2SXSecModel,
+                                     psi2SXSecModel, psi2SXSecModel},
+                                 {psi2SPolModel, chi1PolModel, chi2PolModel, psi2SPolModel,
+                                     psi2SPolModel, psi2SPolModel},
+                                 {id, id, id, id, lambdaPsiToChi1, lambdaPsiToChi2},
+                                 {1.0, B_CHIC1_JPSI[0] / br_c1_jpsi, B_CHIC2_JPSI[0] / br_c2_jpsi,
+                                     B_PSIP_JPSI[0] / br_psip_jpsi,
+                                     B_PSIP_CHIC1[0] * B_CHIC1_JPSI[0] / br_c1_jpsi / br_psip_c1,
+                                     B_PSIP_CHIC2[0] * B_CHIC2_JPSI[0] / br_c2_jpsi / br_psip_c2},
+                                 L_CMS * br_jpsi_mm, M_JPSI);
 
 
-  loglike += chicCrossSectionRatio(m_chic_ratio_CMS_cs, psi2SXSecModel, chic1XSecModel, chic2XSecModel,
-                                   chic1PolModel, chic2PolModel, br_psip_c1, br_psip_c2);
+  loglike += loglikeCrossSectionRatio(m_chic_ratio_CMS_cs,
+                                      {chic2XSecModel, psi2SXSecModel}, {chic1XSecModel, psi2SXSecModel},
+                                      {chi2PolModel, psi2SPolModel}, {chi1PolModel, psi2SPolModel},
+                                      {id, lambdaPsiToChi2}, {id, lambdaPsiToChi1},
+                                      {1.0, B_PSIP_CHIC2[0] / br_psip_c2},
+                                      {1.0, B_PSIP_CHIC1[0] / br_psip_c1},
+                                      br_psip_c2 / br_psip_c1, M_JPSI);
 
 
-  loglike += psi2SPolarization(m_psi2S_CMS_pol, psi2SPolModel);
 
-  loglike += jpsiPolarization(m_jpsi_CMS_pol, jpsiPolModel, psi2SXSecModel, chic1XSecModel, chic2XSecModel, jpsiXSecModel,
-                              br_psip_c1, br_psip_c2, br_psip_jpsi, br_c1_jpsi, br_c2_jpsi);
+  loglike += loglikePolarization(m_psi2S_CMS_pol, {psi2SXSecModel}, {psi2SPolModel}, {id}, {1.0}, M_PSI2S);
+
+  // same as above for the cross-sections. All contributions have to be considered individually
+  loglike += loglikePolarization(m_jpsi_CMS_pol,
+                                 {jpsiXSecModel, chic1XSecModel, chic2XSecModel, psi2SXSecModel,
+                                     psi2SXSecModel, psi2SXSecModel},
+                                 {psi2SPolModel, chi1PolModel, chi2PolModel, psi2SPolModel,
+                                     psi2SPolModel, psi2SPolModel},
+                                 {id, id, id, id, lambdaPsiToChi1, lambdaPsiToChi2},
+                                 {1.0, B_CHIC1_JPSI[0] / br_c1_jpsi, B_CHIC2_JPSI[0] / br_c2_jpsi,
+                                     B_PSIP_JPSI[0] / br_psip_jpsi,
+                                     B_PSIP_CHIC1[0] * B_CHIC1_JPSI[0] / br_c1_jpsi / br_psip_c1,
+                                     B_PSIP_CHIC2[0] * B_CHIC2_JPSI[0] / br_c2_jpsi / br_psip_c2},
+                                 M_JPSI);
 
   for (const auto& nuissPar : m_nuissParams) {
     loglike += nuissPar.second(p[nuissPar.first]);
   }
+
 
   return -loglike;
 }
