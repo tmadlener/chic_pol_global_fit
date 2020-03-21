@@ -6,12 +6,12 @@
 
 #include <cmath>
 #include <functional>
+#include <algorithm>
+#include <utility>
 
 using CSModel = std::function<double(double)>;
-using PsiPolModel = std::function<double(double)>;
-using ChiPolModel = std::function<double(double, double)>;
-using JpsiPolModel = std::function<double(double, double, double, double, double, double)>;
-
+using PolModel = std::function<double(double)>;
+using PolFeedDownTrafo = std::function<double(double)>;
 
 double power_law(double x, double beta, double gamma)
 {
@@ -115,32 +115,148 @@ double sampleFunc(const double min, const double max, const double step, Func fu
   return val / nsteps;
 }
 
-double psi2SCrossSection(const CrossSectionMeasurement& data, CSModel csModel, PsiPolModel polModel,
-                         double nuissLumi, double nuissBrFrac)
+
+/**
+ * Calculate all the partial cross sections at the given DataPoint from the
+ * different cross section models that contribute with given branching
+ * fractions.
+ */
+template<typename DataType>
+std::vector<double> partialCrossSections(const DataType& point, double step,
+                                         const std::vector<CSModel>& csModels,
+                                         const std::vector<double>& brFracs)
+{
+  std::vector<double> partCS;
+  for (size_t i = 0; i < csModels.size(); ++i) {
+
+
+    partCS.push_back(sampleFunc(point.low, point.high + 1e-5, step, csModels[i]) * brFracs[i]);
+  }
+  return partCS;
+}
+
+/**
+ * Calculate the lambda of a state that is affected by feed-down contributions.
+ * Inputs are the models that describe the lambdas of the different
+ * contributions and how they are affected in the feed-down process.
+ * Additionally the fraction of each contribution is necessary.
+ */
+double lambdaFeedDown(double ptm, const std::vector<PolModel>& polModels,
+                      const std::vector<PolFeedDownTrafo>& feedDownTrafos,
+                      const std::vector<double>& weights)
+{
+  std::vector<double> lambdas;
+  for (size_t i = 0; i < polModels.size(); ++i) {
+    const double lam = polModels[i](ptm);
+    lambdas.push_back(feedDownTrafos[i](lam));
+  }
+  return weightedLambda(lambdas, weights);
+}
+
+/**
+ * Calculate the predicted cross section and lambda parameter for a given data
+ * point, given the cross section and polarization models as well as the
+ * functions describing how the lambdas transform in each feed-down decay and
+ * the corresponding branching fractions for each process
+ */
+template<typename DataType>
+std::pair<double, double> crossSecAndLambda(const DataType& point, double step,
+                                            const std::vector<CSModel>& csModels,
+                                            const std::vector<PolModel>& polModels,
+                                            const std::vector<PolFeedDownTrafo>& feedDownTrafos,
+                                            const std::vector<double>& brFracs)
+{
+  const auto partialCrossSecs = partialCrossSections(point, step, csModels, brFracs);
+
+  const double totalCS = std::accumulate(partialCrossSecs.cbegin(), partialCrossSecs.cend(), 0.0);
+  std::vector<double> polWeights;
+  for (const auto& ps : partialCrossSecs) { polWeights.push_back(ps / totalCS); }
+
+  const double lambda = lambdaFeedDown(point.ptM, polModels, feedDownTrafos, polWeights);
+  return {totalCS, lambda};
+}
+
+/**
+ * Calculate the contribution to the log-likelihood given a set of cross-section
+ * measurements and models describing the cross section and polarization of each
+ * state contributing to the measured state.
+ */
+double loglikeCrossSection(const CrossSectionMeasurement& data,
+                           const std::vector<CSModel>& csModels,
+                           const std::vector<PolModel>& polModels,
+                           const std::vector<PolFeedDownTrafo>& feedDownTrafos,
+                           const std::vector<double>& brFracs,
+                           const double globNuiss,
+                           const double mass)
 {
   double loglike = 0;
-
   for (const auto& point : data) {
-    const double dirCS = sampleFunc(point.low, point.high + 1e-5, 0.5 / M_PSI2S, csModel);
-    const double lambda = polModel(point.ptM);
+    double cs, lambda;
+    std::tie(cs, lambda) = crossSecAndLambda(point, 0.5 / mass,
+                                             csModels, polModels, feedDownTrafos, brFracs);
+
     const double accCorr = acceptanceCorrection(point.K, lambda);
+    const double crossSec = point.xSec * accCorr * globNuiss;
+    const double uncer = point.uncer * accCorr * globNuiss;
 
-    const double crossSec = point.xSec * accCorr * nuissLumi * nuissBrFrac;
-    const double uncer = point.uncer * accCorr * nuissLumi * nuissBrFrac;
-
-    const double relDiff = (dirCS - crossSec) / uncer;
+    const double relDiff = (cs - crossSec) / uncer;
     loglike += -0.5 * relDiff * relDiff;
   }
 
   return loglike;
 }
 
-double psi2SPolarization(const PolarizationMeasurement& data, PsiPolModel polModel)
+/**
+ * Calculate the contribution to the log-likelihood for a cross-section ratio
+ * measurement
+ */
+double loglikeCrossSectionRatio(const CrossSectionMeasurement& data,
+                                const std::vector<CSModel>& csModelsN,
+                                const std::vector<CSModel>& csModelsD,
+                                const std::vector<PolModel>& polModelsN,
+                                const std::vector<PolModel>& polModelsD,
+                                const std::vector<PolFeedDownTrafo>& fdTrafosN,
+                                const std::vector<PolFeedDownTrafo>& fdTrafosD,
+                                const std::vector<double>& brFracsN,
+                                const std::vector<double>& brFracsD,
+                                const double globNuiss, const double mass)
 {
   double loglike = 0;
-
   for (const auto& point : data) {
-    const double lambda = polModel(point.ptM);
+    double csN, lambdaN, csD, lambdaD;
+    std::tie(csN, lambdaN) = crossSecAndLambda(point, 0.5 / mass,
+                                               csModelsN, polModelsN, fdTrafosN, brFracsN);
+    std::tie(csD, lambdaD) = crossSecAndLambda(point, 0.5 / mass,
+                                               csModelsD, polModelsD, fdTrafosD, brFracsD);
+
+    const double accCorr = acceptanceCorrection(point.K, lambdaN) / acceptanceCorrection(point.K, lambdaD);
+    const double crossSecRatio = point.xSec * accCorr * globNuiss;
+    const double uncer = point.uncer * accCorr * globNuiss;
+
+    const double relDiff = (csN / csD - crossSecRatio) / uncer;
+    loglike += -0.5 * relDiff * relDiff;
+  }
+
+  return loglike;
+}
+
+/**
+ * Calculate the contribution to the log-likelihood for a polarization
+ * measurement. The cross section models are necessary to calculate the
+ * contributions to the measured state.
+ */
+double loglikePolarization(const PolarizationMeasurement& data,
+                           const std::vector<CSModel>& csModels,
+                           const std::vector<PolModel>& polModels,
+                           const std::vector<PolFeedDownTrafo>& fdTrafos,
+                           const std::vector<double>& brFracs,
+                           const double mass)
+{
+  double loglike = 0;
+  for (const auto& point : data) {
+    double lambda;
+    std::tie(std::ignore, lambda) = crossSecAndLambda(point, 0.5 / mass,
+                                                      csModels, polModels, fdTrafos, brFracs);
 
     const double relDiff = (lambda - point.lth) / point.uncer;
     loglike += -0.5 * relDiff * relDiff;
@@ -149,124 +265,34 @@ double psi2SPolarization(const PolarizationMeasurement& data, PsiPolModel polMod
   return loglike;
 }
 
-double chicCrossSection(const CrossSectionMeasurement& data, CSModel psiCSModel, CSModel chiCSModel,
-                        ChiPolModel chiPolModel,
-                        const double nuLumi, const double nuBrPsiChi, const double nuBrChiDet,
-                        const double brPsiChi, const double mChi)
-{
-  double loglike = 0;
-  for (const auto& point : data) {
-    const double dirCSPsi = sampleFunc(point.low, point.high + 1e-5, 0.5 / mChi, psiCSModel);
-    const double dirCSChi = sampleFunc(point.low, point.high + 1e-5, 0.5 / mChi, chiCSModel);
 
-    const double csChi = dirCSChi + dirCSPsi * brPsiChi / nuBrPsiChi;
-    const double lambda = chiPolModel(point.ptM, dirCSChi / csChi);
-    const double accCorr = acceptanceCorrection(point.K, lambda);
+/**
+ * Helper functor representing the identity function. In this case necessary
+ * because in many feed-down decays the polarization is unaffected
+ */
+template<typename T>
+struct Identity {
+  T operator()(T x) const {return x;}
+};
 
-    const double crossSec = point.xSec * accCorr * nuLumi * nuBrChiDet;
-    const double uncer = point.uncer * accCorr * nuLumi * nuBrChiDet;
-
-    const double relDiff = (csChi - crossSec) / uncer;
-    loglike += -0.5 * relDiff * relDiff;
-  }
-
-  return loglike;
+/**
+ * Transformation of the psi(2S) lambda in the psi(2S) -> chi1 feed-down decay
+ */
+double lambdaPsiToChi1(const double lambdaPsi) {
+  return lambdaPsi / (4 + lambdaPsi);
 }
 
-double chicCrossSectionRatio(const CrossSectionMeasurement& data, CSModel psiCSModel,
-                             CSModel chi1CSModel, CSModel chi2CSModel,
-                             ChiPolModel chi1PolModel, ChiPolModel chi2PolModel,
-                             const double nuBrPsiChi1, const double nuBrPsiChi2)
-{
-  double loglike = 0;
-  for (const auto& point : data) {
-    const double dirCSPsi = sampleFunc(point.low, point.high + 1e-5, 0.5 / M_JPSI, psiCSModel);
-    const double dirCSChi1 = sampleFunc(point.low, point.high + 1e-5, 0.5 / M_JPSI, chi1CSModel);
-    const double dirCSChi2 = sampleFunc(point.low, point.high + 1e-5, 0.5 / M_JPSI, chi2CSModel);
-
-    const double csChi1 = dirCSChi1 + dirCSPsi * B_PSIP_CHIC1[0] / nuBrPsiChi1;
-    const double csChi2 = dirCSChi2 + dirCSPsi * B_PSIP_CHIC2[0] / nuBrPsiChi2;
-
-    const double lambda1 = chi1PolModel(point.ptM, dirCSChi1 / csChi1);
-    const double lambda2 = chi2PolModel(point.ptM, dirCSChi2 / csChi2);
-
-    const double accCorr = acceptanceCorrection(point.K, lambda2) / acceptanceCorrection(point.K, lambda1);
-
-    const double crossSecRatio = point.xSec * accCorr * nuBrPsiChi2 / nuBrPsiChi1;
-    const double uncer = point.uncer * accCorr * nuBrPsiChi2 / nuBrPsiChi1;
-
-    const double relDiff = (csChi2 / csChi1 - crossSecRatio) / uncer;
-    loglike += -0.5 * relDiff * relDiff;
-  }
-
-  return loglike;
+/**
+ * Transformation of the psi(2S) lambda in the psi(2S) -> chi2 feed-down decay
+ */
+double lambdaPsiToChi2(const double lambdaPsi) {
+  return 21 * lambdaPsi / (60 + 13 * lambdaPsi);
 }
 
-double jpsiCrossSection(const CrossSectionMeasurement& data, CSModel psiCSModel,
-                        CSModel chi1CSModel, CSModel chi2CSModel, CSModel jpsiCSModel,
-                        JpsiPolModel polModel,
-                        const double nuBrPsiChi1, const double nuBrPsiChi2, const double nuBrPsiJpsi,
-                        const double nuBrChi1Jpsi, const double nuBrChi2Jpsi,
-                        const double nuBrJpsiMm, const double nuLumi)
-{
-  double loglike = 0;
 
-  for (const auto& point : data) {
-    const double dirCSPsi = sampleFunc(point.low, point.high + 1e-5, 0.5 / M_JPSI, psiCSModel);
-    const double dirCSChi1 = sampleFunc(point.low, point.high + 1e-5, 0.5 / M_JPSI, chi1CSModel);
-    const double dirCSChi2 = sampleFunc(point.low, point.high + 1e-5, 0.5 / M_JPSI, chi2CSModel);
-    const double dirCSJpsi = sampleFunc(point.low, point.high + 1e-5, 0.5 / M_JPSI, jpsiCSModel);
 
-    const double csChi1 = dirCSChi1 + dirCSPsi * B_PSIP_CHIC1[0] / nuBrPsiChi1;
-    const double csChi2 = dirCSChi2 + dirCSPsi * B_PSIP_CHIC2[0] / nuBrPsiChi2;
 
-    const double fdChi1 = csChi1 * B_CHIC1_JPSI[0] / nuBrChi1Jpsi;
-    const double fdChi2 = csChi2 * B_CHIC2_JPSI[0] / nuBrChi2Jpsi;
 
-    const double csJpsi = dirCSJpsi + dirCSPsi * B_PSIP_JPSI[0] / nuBrPsiJpsi + fdChi1 + fdChi2;
 
-    const double lambda = polModel(point.ptM, dirCSChi1 / csChi1, dirCSChi2 / csChi2,
-                                   csJpsi / dirCSJpsi, fdChi1 / csJpsi, fdChi2 / csJpsi);
-    const double accCorr = acceptanceCorrection(point.K, lambda);
-
-    const double crossSec = point.xSec * accCorr * nuLumi * nuBrJpsiMm;
-    const double uncer = point.uncer * accCorr * nuLumi * nuBrJpsiMm;
-
-    const double relDiff = (csJpsi - crossSec) / uncer;
-    loglike += -0.5 * relDiff * relDiff;
-  }
-
-  return loglike;
-}
-
-double jpsiPolarization(const PolarizationMeasurement& data, JpsiPolModel polModel,
-                        CSModel psiCSModel, CSModel chi1CSModel, CSModel chi2CSModel, CSModel jpsiCSModel,
-                        const double nuBrPsiChi1, const double nuBrPsiChi2, const double nuBrPsiJpsi,
-                        const double nuBrChi1Jpsi, const double nuBrChi2Jpsi)
-{
-  double loglike = 0;
-  for (const auto& point : data) {
-    const double dirCSPsi = sampleFunc(point.low, point.high + 1e-5, 0.5 / M_JPSI, psiCSModel);
-    const double dirCSChi1 = sampleFunc(point.low, point.high + 1e-5, 0.5 / M_JPSI, chi1CSModel);
-    const double dirCSChi2 = sampleFunc(point.low, point.high + 1e-5, 0.5 / M_JPSI, chi2CSModel);
-    const double dirCSJpsi = sampleFunc(point.low, point.high + 1e-5, 0.5 / M_JPSI, jpsiCSModel);
-
-    const double csChi1 = dirCSChi1 + dirCSPsi * B_PSIP_CHIC1[0] / nuBrPsiChi1;
-    const double csChi2 = dirCSChi2 + dirCSPsi * B_PSIP_CHIC2[0] / nuBrPsiChi2;
-
-    const double fdChi1 = csChi1 * B_CHIC1_JPSI[0] / nuBrChi1Jpsi;
-    const double fdChi2 = csChi2 * B_CHIC2_JPSI[0] / nuBrChi2Jpsi;
-
-    const double csJpsi = dirCSJpsi + dirCSPsi * B_PSIP_JPSI[0] / nuBrPsiJpsi + fdChi1 + fdChi2;
-
-    const double lambda = polModel(point.ptM, dirCSChi1 / csChi1, dirCSChi2 / csChi2,
-                                   csJpsi / dirCSJpsi, fdChi1 / csJpsi, fdChi2 / csJpsi);
-
-    const double relDiff = (lambda - point.lth) / point.uncer;
-    loglike += -0.5 * relDiff * relDiff;
-  }
-
-  return loglike;
-}
 
 #endif
