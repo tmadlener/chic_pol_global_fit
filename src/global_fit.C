@@ -2,6 +2,10 @@
 #include "likelihood.h"
 #include "fitter.h"
 
+#include "TFile.h"
+#include "TGraphAsymmErrors.h"
+
+#include <utility>
 void global_fit()
 {
   // cross section data
@@ -24,4 +28,22 @@ void global_fit()
   LikelihoodFitter fitter;
 
   fitter.Fit(likelihood);
+  TFile* resFile = new TFile("results/data_graphs.root", "recreate");
+  resFile->cd();
+
+  for (const auto& data : likelihood.getDataGraphs(fitter.Result())) {
+    data.Write();
+  }
+  for (const auto& model : likelihood.getPsi2SCSModel(fitter.Result())) {
+    model.Write();
+  }
+  for (const auto& model : likelihood.getChicCSModel(fitter.Result())) {
+    model.Write();
+  }
+  for (const auto& model : likelihood.getJpsiCSModel(fitter.Result())) {
+    model.Write();
+  }
+
+  resFile->Write("", TObject::kWriteDelete);
+  resFile->Close();
 }

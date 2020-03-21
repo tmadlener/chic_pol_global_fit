@@ -4,6 +4,7 @@
 #include "Math/Minimizer.h"
 #include "Fit/Fitter.h"
 #include "Math/MinimizerOptions.h"
+#include "Fit/FitResult.h"
 
 class LikelihoodFitter {
 public:
@@ -22,6 +23,8 @@ public:
 
   template<typename LLH>
   TGraph Contour(const LLH& llh, const char* par1, const char* par2, double errLvl=0.5, unsigned int nPoints=25) const;
+
+  const ROOT::Fit::FitResult& Result() const { return fitter.Result(); }
 
 private:
   ROOT::Fit::Fitter fitter{};
