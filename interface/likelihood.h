@@ -233,10 +233,10 @@ void GlobalLikelihood::setupFit()
 
 void GlobalLikelihood::defineStartParams()
 {
-  setParam("sigma_psip", 24.81, 3);
-  setParam("sigma_chic2", 84.25, 7);
-  setParam("sigma_chic1", 104.48, 10);
-  setParam("sigma_jpsi", 116.9, 10);
+  setParam("sigma_psip", 4.0, 3);
+  setParam("sigma_chic2", 14.0, 7);
+  setParam("sigma_chic1", 17.5, 10);
+  setParam("sigma_jpsi", 19.8, 10);
 
   setParam("f_long_psi", 0.3, 0.1, 0, 1);
   setParam("f_long_c1", 0.11, 0.1, 0, 1);
