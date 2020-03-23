@@ -123,6 +123,13 @@ public:
   double uncer;
 };
 
+struct ParameterScanSettings {
+  double min;
+  double max;
+  std::string name;
+};
+
+using ScanSettings = std::vector<ParameterScanSettings>;
 
 
 #endif

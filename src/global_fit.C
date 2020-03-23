@@ -2,7 +2,13 @@
 #include "likelihood.h"
 #include "fitter.h"
 
-void global_fit()
+#include "TFile.h"
+#include "TTree.h"
+
+#include <string>
+
+void global_fit(unsigned nScanPoints=5000000,
+                const std::string scanFileName="results/scan_file.root")
 {
   // cross section data
   const auto psi2S_ATLAS_cs = readData<CrossSectionData>("data/ATLAS_psi2S_cross_section.dat");
@@ -24,4 +30,17 @@ void global_fit()
   LikelihoodFitter fitter;
 
   fitter.Fit(likelihood);
+
+  TFile* scanFile = new TFile(scanFileName.c_str(), "recreate");
+  TTree* scanTree = new TTree("log_like_scan", "log likelihood scan values");
+
+  const ScanSettings scanParameters = {{
+      {0, 1, "f_long_c2"},
+      {0, 1, "f_long_c1"}
+    }};
+
+  fitter.Scan(likelihood, scanParameters, scanTree, nScanPoints);
+
+  scanTree->Write("", TObject::kWriteDelete);
+  scanFile->Close();
 }

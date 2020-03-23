@@ -76,12 +76,14 @@ public:
   /**
    * Get the number of parameters
    */
-  int nPars() const { return m_startParams.size(); }
+  size_t nPars() const { return m_startParams.size(); }
+
+  int getParIdx(const std::string& name) const { return IPAR(name.c_str()); }
 
   /**
    * Get the start parameter settings (necessary to pass them to the fitter)
    */
-  const ParamsSettings& getStartParams() const { return m_startParams; }
+  ParamsSettings getStartParams() const { return m_startParams; }
 
 private:
   /**
