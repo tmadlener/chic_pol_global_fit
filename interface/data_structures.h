@@ -12,6 +12,7 @@
 #include <iostream>
 #include <vector>
 #include <array>
+#include <utility>
 
 struct CrossSectionData {
 
@@ -126,11 +127,11 @@ public:
 struct ParameterScanSettings {
   double min;
   double max;
+  size_t n;
   std::string name;
 };
 
-using ScanSettings = std::vector<ParameterScanSettings>;
+using ScanSettings = std::pair<ParameterScanSettings, ParameterScanSettings>;
 
 
 #endif
-
