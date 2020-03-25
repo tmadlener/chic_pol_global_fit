@@ -85,6 +85,16 @@ public:
    */
   ParamsSettings getStartParams() const { return m_startParams; }
 
+  /**
+   * Fix a parameter to the passed value
+   */
+  void fixParameter(const char* name, const double val)
+  {
+    auto& par = m_startParams[IPAR(name)];
+    par.SetValue(val);
+    par.Fix();
+  }
+
 private:
   /**
    * set up everything that is needed so that is needed for the fit

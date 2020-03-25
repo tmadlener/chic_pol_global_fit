@@ -27,6 +27,13 @@ void global_fit(unsigned nScanPoints=5000000,
   GlobalLikelihood likelihood(psi2S_ATLAS_cs, psi2S_CMS_cs, chic2_ATLAS_cs, chic1_ATLAS_cs,
                               jpsi_CMS_cs, chic_ratio_CMS_cs, psi2S_CMS_pol, jpsi_CMS_pol);
 
+  // fix all nuissances
+  for (const auto* par : {"L_CMS", "L_ATLAS", "br_psip_dp", "br_psip_mm",
+        "br_psip_c2", "br_psip_c1", "br_psip_jpsi", "br_c2_jpsi", "br_c1_jpsi", "br_jpsi_mm"}) {
+    likelihood.fixParameter(par, 1);
+  }
+
+
   LikelihoodFitter fitter;
 
   fitter.Fit(likelihood);
