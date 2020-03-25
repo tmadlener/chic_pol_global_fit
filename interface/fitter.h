@@ -2,7 +2,6 @@
 #define H_FITTER__
 
 #include "data_structures.h"
-#include "misc_utils.h"
 #include "progress.h"
 
 #include "Math/Minimizer.h"
@@ -38,7 +37,7 @@ public:
 
 
   template<typename LLH>
-  void Scan(const LLH& llh, const ScanSettings& scanSettings, TTree* tree, const size_t nSamples=1000);
+  void Scan(const LLH& llh, const ScanSettings& scanSettings, TTree* tree);
 
   void PrintResults() { fitter.GetMinimizer()->PrintResults(); }
 
@@ -59,13 +58,14 @@ private:
 
 
 template<typename LLH>
-void LikelihoodFitter::Scan(const LLH& llh, const ScanSettings& scanSettings, TTree* tree, const size_t nSamples)
+void LikelihoodFitter::Scan(const LLH& llh, const ScanSettings& scanSettings, TTree* tree)
 {
-  // avoid too much output
+  // avoid too much output from the fitter
   const int oldPrintLevel = fitter.Config().MinimizerOptions().PrintLevel();
   fitter.Config().MinimizerOptions().SetPrintLevel(0);
 
   auto& params = fitter.Config().ParamsSettings();
+  const size_t nPars = params.size();
 
   std::vector<double> values(params.size() + 1);
 
@@ -81,7 +81,7 @@ void LikelihoodFitter::Scan(const LLH& llh, const ScanSettings& scanSettings, TT
   }
   values.assign(fitter.Result().Parameters().cbegin(), fitter.Result().Parameters().cend());
   const double minimum = fitter.Result().MinFcnValue();
-  values[params.size()] = minimum;
+  values[nPars] = minimum;
   tree->Fill();
 
   // get the internal indices of the parameters that are varied randomly now to
@@ -99,37 +99,32 @@ void LikelihoodFitter::Scan(const LLH& llh, const ScanSettings& scanSettings, TT
   delete gRandom;
   gRandom = new TRandom3(0);
 
-  // mean and sigma of normal distribution for sampling for all the parameters
-  const auto& par = fitter.Result().Parameters();
-  const auto& errs = fitter.Result().Errors();
-
   auto startTime = ProgressClock::now();
   size_t count{};
-  const size_t total = scanSettings.first.n * scanSettings.second.n * nSamples;
+  const size_t total = scanSettings.first.values.size() * scanSettings.second.values.size();
 
-  for (const double p1 : linspace(scanSettings.first.min, scanSettings.first.max, scanSettings.first.n)) {
-    values[parIdcs.first] = p1;
-    for (const double p2 : linspace(scanSettings.second.min, scanSettings.second.max, scanSettings.second.n)) {
-      values[parIdcs.second] = p2;
+  // For each parameter set, find the minimal chi2 value with fixed values. If
+  // this value is above the chi2 level corresponding to a given CL, then no
+  // configuration of the other parameters can exist, for which a smaller chi2
+  // value can be achieved (given the fixed values of the scan parameters).
+  // Hence, this point is definitely outside of the projected contour. All other
+  // points must be within, since such a configuration must exist, but since only
+  // the 2d projection is of interest the exact configuration is of no concern.
+  for (const double p1 : scanSettings.first.values) {
+    params[parIdcs.first].Fix();
+    params[parIdcs.first].SetValue(p1);
 
+    for (const double p2 : scanSettings.second.values) {
+      params[parIdcs.second].Fix();
+      params[parIdcs.second].SetValue(p2);
 
-      for (size_t iSamp=0; iSamp < nSamples; ++iSamp) {
-        for (const int iPar : freeParams) {
-          values[iPar] = std::abs(gRandom->Gaus(par[iPar], errs[iPar]));
-        }
-
-        const double val = llh(values.data());
-        // Only storing "reasonable" candidate events. Using 2 * nPars should ensure
-        // that even the 99 % CLs can be drawn for fits with up to a few hundred
-        // parameters
-        if (val < minimum + params.size() * 2) {
-          values[params.size()] = val;
-          tree->Fill();
-        }
-        count++;
-        printProgress(count, total - 1, startTime, total / nSamples / 5);
+      if (FitFromParams(llh, params)) {
+        values.assign(fitter.Result().Parameters().cbegin(), fitter.Result().Parameters().cend());
+        values[nPars] = fitter.Result().MinFcnValue();
+        tree->Fill();
       }
-
+      count++;
+      printProgress<PrintStyle::ProgressText>(count, total - 1, startTime, 100);
     }
   }
 

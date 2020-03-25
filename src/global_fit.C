@@ -1,14 +1,18 @@
 #include "data_structures.h"
 #include "likelihood.h"
 #include "fitter.h"
+#include "misc_utils.h"
 
 #include "TFile.h"
 #include "TTree.h"
 
 #include <string>
 
-void global_fit(unsigned nScanPoints=5000000,
-                const std::string scanFileName="results/scan_file.root")
+void global_fit(const std::string scanFileName="results/scan_file.root",
+                unsigned nScanPoints1=26,
+                unsigned nScanPoints2=26,
+                const double fLow1=0, const double fHigh1=1,
+                const double fLow2=0, const double fHigh2=1)
 {
   // cross section data
   const auto psi2S_ATLAS_cs = readData<CrossSectionData>("data/ATLAS_psi2S_cross_section.dat");
@@ -41,10 +45,10 @@ void global_fit(unsigned nScanPoints=5000000,
   TFile* scanFile = new TFile(scanFileName.c_str(), "recreate");
   TTree* scanTree = new TTree("log_like_scan", "log likelihood scan values");
 
-  const ScanSettings scanParameters = {{0, 1, 101, "f_long_c2"},
-                                       {0, 1, 101, "f_long_c1"}};
+  const ScanSettings scanParameters = {{linspace(fLow2, fHigh2, nScanPoints2), "f_long_c2"},
+                                       {linspace(fLow1, fHigh1, nScanPoints1), "f_long_c1"}};
 
-  fitter.Scan(likelihood, scanParameters, scanTree, nScanPoints);
+  fitter.Scan(likelihood, scanParameters, scanTree);
 
   scanTree->Write("", TObject::kWriteDelete);
   scanFile->Close();

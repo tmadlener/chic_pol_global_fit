@@ -125,9 +125,7 @@ public:
 };
 
 struct ParameterScanSettings {
-  double min;
-  double max;
-  size_t n;
+  std::vector<double> values;
   std::string name;
 };
 
