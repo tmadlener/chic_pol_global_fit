@@ -53,8 +53,6 @@ static constexpr int IPAR(const char* name)
 }
 
 
-using ParamsSettings = std::vector<ROOT::Fit::ParameterSettings>;
-
 class GlobalLikelihood {
 public:
   GlobalLikelihood(const CrossSectionMeasurement& psi2S_ATLAS, const CrossSectionMeasurement& psi2S_CMS,

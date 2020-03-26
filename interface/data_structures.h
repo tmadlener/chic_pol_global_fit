@@ -4,6 +4,7 @@
 #include "constants.h"
 
 #include "TGraphAsymmErrors.h"
+#include "Fit/ParameterSettings.h"
 
 #include <string>
 #include <sstream>
@@ -131,5 +132,8 @@ struct ParameterScanSettings {
 
 using ScanSettings = std::pair<ParameterScanSettings, ParameterScanSettings>;
 
+
+
+using ParamsSettings = std::vector<ROOT::Fit::ParameterSettings>;
 
 #endif
