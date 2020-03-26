@@ -19,7 +19,6 @@ const double M_PSI2S = 3.686;
 const double M_CHIC2 = 3.556;
 const double M_CHIC1 = 3.511;
 
-const double MIN_PTM = 2;
 const double PTMNORM = 3.;
 
 #endif

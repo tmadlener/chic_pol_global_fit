@@ -58,7 +58,7 @@ using CrossSectionMeasurement = std::vector<CrossSectionData>;
 using PolarizationMeasurement = std::vector<PolarizationData>;
 
 template<typename DataType>
-std::vector<DataType> readData(const std::string& filename, const double ptMMin=MIN_PTM)
+std::vector<DataType> readData(const std::string& filename)
 {
   std::vector<DataType> data;
   std::ifstream file(filename);
@@ -70,44 +70,72 @@ std::vector<DataType> readData(const std::string& filename, const double ptMMin=
   }
 
   while(std::getline(file, line)) {
-    DataType point(line);
-    if (point.ptM > ptMMin) {
-      data.push_back(point);
-    }
+    data.emplace_back(line);
   }
 
   return data;
 }
 
-template<typename DataType, typename ValFunc>
-TGraphAsymmErrors asTGraph(const std::vector<DataType>& data, ValFunc vFunc)
+template<typename DataType>
+double symError(const DataType& point) { return point.uncer; }
+
+template<typename DataType>
+double ptM(const DataType& point) { return point.ptM; }
+
+template<typename DataType>
+using PFunc = std::function<double(const DataType&)>;
+
+
+/**
+ * This is the all purpose function that does the heavy lifting of creating a
+ * TGraph from the internal data structures. In principle it can process all
+ * vectors of DataTypes where the DataType provides a low and high member that
+ * gives the lower and upper bounds of the bin. All other function retrieval
+ * values are parametrized and expect a function taking a const DataType& as
+ * single argument and returing a double. The defaults are such that the
+ * CrossSectionData and PolarizationData types can be processed only defining a
+ * function that gives the value on the y-axis.
+ */
+template<typename DataType, typename ValF=PFunc<DataType>, typename XF=PFunc<DataType>,
+         typename ErrLoF=PFunc<DataType>, typename ErrHiF=PFunc<DataType>>
+TGraphAsymmErrors asTGraph(const std::vector<DataType>& data, ValF vFunc, XF xFunc=ptM<DataType>,
+                           ErrLoF errLoF=symError<DataType>, ErrHiF errHiF=symError<DataType>)
 {
   std::vector<double> ptm;
   std::vector<double> val;
-  std::vector<double> uncer;
+  std::vector<double> uhi;
+  std::vector<double> ulow;
   std::vector<double> low;
   std::vector<double> high;
 
   for (const auto& point : data) {
-    ptm.push_back(point.ptM);
+    const double xval = xFunc(point);
+    ptm.push_back(xval);
     val.push_back(vFunc(point));
-    uncer.push_back(point.uncer);
-    low.push_back(point.ptM - point.low);
-    high.push_back(point.high - point.ptM);
+    ulow.push_back(errLoF(point));
+    uhi.push_back(errHiF(point));
+    low.push_back(xval - point.low);
+    high.push_back(point.high - xval);
   }
 
-  return TGraphAsymmErrors(data.size(), ptm.data(), val.data(), low.data(), high.data(), uncer.data(), uncer.data());
+  return TGraphAsymmErrors(data.size(), ptm.data(), val.data(), low.data(), high.data(), ulow.data(), uhi.data());
 }
 
 
+/**
+ * Overload for CrossSectionData
+ */
 TGraphAsymmErrors asTGraph(const CrossSectionMeasurement& data)
 {
-  return asTGraph(data, [](const CrossSectionData& point) { return point.xSec;} );
+  return asTGraph(data, [](const CrossSectionData& point) { return point.xSec; } );
 }
 
+/**
+ * Overload for PolarizationData
+ */
 TGraphAsymmErrors asTGraph(const PolarizationMeasurement& data)
 {
-  return asTGraph(data, [](const PolarizationData& point) { return point.lth;} );
+  return asTGraph(data, [](const PolarizationData& point) { return point.lth; } );
 }
 
 struct NuissanceParameter {
@@ -132,6 +160,39 @@ struct ParameterScanSettings {
 
 using ScanSettings = std::pair<ParameterScanSettings, ParameterScanSettings>;
 
+
+struct CosthRatioData {
+  CosthRatioData(const std::string& line) {
+    std::stringstream sstr(line);
+    sstr >> this->costh;
+    sstr >> this->ratio;
+    sstr >> this->low;
+    sstr >> this->high;
+    sstr >> this->u_low;
+    sstr >> this->u_high;
+  }
+
+  double costh;
+  double low;
+  double high;
+  double u_low;
+  double u_high;
+  double ratio;
+};
+
+using CosthRatioMeasurement = std::vector<CosthRatioData>;
+
+/**
+ * Overload for CosthRatioData
+ */
+TGraphAsymmErrors asTGraph(const CosthRatioMeasurement& data)
+{
+  return asTGraph(data,
+                  [] (const CosthRatioData& p) { return p.ratio; },
+                  [] (const CosthRatioData& p) { return p.costh; },
+                  [] (const CosthRatioData& p) { return p.u_low; },
+                  [] (const CosthRatioData& p) { return p.u_high; });
+}
 
 
 using ParamsSettings = std::vector<ROOT::Fit::ParameterSettings>;
