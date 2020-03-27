@@ -65,27 +65,32 @@ void LikelihoodFitter::Scan(const LLH& llh, const ScanSettings& scanSettings, TT
   fitter.Config().MinimizerOptions().SetPrintLevel(0);
 
   auto& params = fitter.Config().ParamsSettings();
-  const size_t nPars = params.size();
-
-  std::vector<double> values(params.size() + 1);
-
-  for (size_t i=0; i < params.size(); ++i) {
-    tree->Branch(params[i].Name().c_str(), &values[i]);
-  }
-  tree->Branch("llh", &values[params.size()]);
 
   // first do a fit with the usual settings just to make sure that the scan is done around the minimum
   if (!FitFromParams(llh, params)) {
     std::cerr << "Could not find a valid minimum to scan around\n";
     return;
   }
+
+  std::vector<double> values(params.size() + 1);
+
+  for (size_t i=0; i < params.size(); ++i) {
+    tree->Branch(params[i].Name().c_str(), &values[i]);
+  }
+  double llh_val;
+  tree->Branch("llh", &llh_val);
+
+
+  // store all the obtained values, but make it possible to filter out
+  // non-successful fits
+  int goodFit = 1;
+  tree->Branch("goodFit", &goodFit);
+
   values.assign(fitter.Result().Parameters().cbegin(), fitter.Result().Parameters().cend());
-  const double minimum = fitter.Result().MinFcnValue();
-  values[nPars] = minimum;
+  llh_val = fitter.Result().MinFcnValue();
   tree->Fill();
 
-  // get the internal indices of the parameters that are varied randomly now to
-  // avoid having to get them over and over again
+  // get the internal indices of the parameters that are not fixed fro scanning
   std::vector<int> freeParams;
   for (size_t i=0; i < llh.nPars(); ++i) {freeParams.push_back(i);}
   std::pair<int, int> parIdcs;
@@ -118,11 +123,22 @@ void LikelihoodFitter::Scan(const LLH& llh, const ScanSettings& scanSettings, TT
       params[parIdcs.second].Fix();
       params[parIdcs.second].SetValue(p2);
 
+      goodFit = 0;
+
       if (FitFromParams(llh, params)) {
-        values.assign(fitter.Result().Parameters().cbegin(), fitter.Result().Parameters().cend());
-        values[nPars] = fitter.Result().MinFcnValue();
-        tree->Fill();
+        goodFit = 1;
       }
+
+      values.assign(fitter.Result().Parameters().cbegin(), fitter.Result().Parameters().cend());
+      llh_val = fitter.Result().MinFcnValue();
+      tree->Fill();
+
+      // update the starting parameters for the next fit
+      for (const auto iPar : freeParams) {
+        params[iPar].SetValue(values[iPar]);
+      }
+
+
       count++;
       printProgress<PrintStyle::ProgressText>(count, total - 1, startTime, 100);
     }

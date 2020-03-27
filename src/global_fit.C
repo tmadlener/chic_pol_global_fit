@@ -8,6 +8,16 @@
 
 #include <string>
 
+std::vector<double> to_frac(const std::vector<double>& lambdas)
+{
+  std::vector<double> fracs;
+  fracs.reserve(lambdas.size());
+  for (const double l: lambdas) {
+    fracs.push_back((1 - l) / (3 + l));
+  }
+  return fracs;
+}
+
 void global_fit(const std::string scanFileName="results/scan_file.root",
                 unsigned nScanPoints1=26,
                 unsigned nScanPoints2=26,
@@ -42,11 +52,15 @@ void global_fit(const std::string scanFileName="results/scan_file.root",
 
   fitter.Fit(likelihood);
 
+  // make the scanning linear in the lambdas instead of the fractions
+  const auto lambda1 = linspace(fLow1, fHigh1, nScanPoints1);
+  const auto lambda2 = linspace(fLow2, fHigh2, nScanPoints2);
+
   TFile* scanFile = new TFile(scanFileName.c_str(), "recreate");
   TTree* scanTree = new TTree("log_like_scan", "log likelihood scan values");
 
-  const ScanSettings scanParameters = {{linspace(fLow2, fHigh2, nScanPoints2), "f_long_c2"},
-                                       {linspace(fLow1, fHigh1, nScanPoints1), "f_long_c1"}};
+  const ScanSettings scanParameters = {{to_frac(lambda2), "f_long_c2"},
+                                       {to_frac(lambda1), "f_long_c1"}};
 
   fitter.Scan(likelihood, scanParameters, scanTree);
 
