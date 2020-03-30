@@ -295,7 +295,7 @@ double lambdaPsiToChi2(const double lambdaPsi) {
 /**
  * Analytic costh ratio function
  */
-double costhRatio(const double costh, const double lamD, const double lamN, const double norm)
+double costhRatio(const double costh, const double lamN, const double lamD, const double norm)
 {
   return norm * (1 + lamN * costh * costh) / (1 + lamD * costh * costh);
 }
