@@ -8,8 +8,9 @@
 #include "TTree.h"
 
 #include <iostream>
+#include <string>
 
-void costh_fit()
+void costh_fit(const std::string& outfile="results/costh_scan.root")
 {
   const auto costh_ratio_8_12 = readData<CosthRatioData>("data/CMS_chic_costh_ratio_pt_8_12.dat");
   const auto costh_ratio_12_18 = readData<CosthRatioData>("data/CMS_chic_costh_ratio_pt_12_18.dat");
@@ -20,7 +21,7 @@ void costh_fit()
   LikelihoodFitter fitter;
   fitter.Fit(likelihood);
 
-  TFile* scanFile = new TFile("results/costh_scan.root", "recreate");
+  TFile* scanFile = new TFile(outfile.c_str(), "recreate");
   TTree* scanTree = new TTree("log_like_scan", "log likelihood scan values");
 
   const ScanSettings scanParameters = {{linspace(-2., 2., 100), "lambda_1"},
