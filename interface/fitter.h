@@ -131,7 +131,7 @@ void LikelihoodFitter::Scan(const LLH& llh, const ScanSettings& scanSettings, TT
       tree->Fill();
 
       count++;
-      printProgress<PrintStyle::ProgressText>(count, total - 1, startTime, 100);
+      printProgress<PrintStyle::ProgressText>(count, total, startTime, 100);
     }
   }
 

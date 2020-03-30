@@ -6,8 +6,8 @@
 
 #include <cmath>
 #include <functional>
-#include <algorithm>
 #include <utility>
+#include <numeric>
 
 using CSModel = std::function<double(double)>;
 using PolModel = std::function<double(double)>;
