@@ -13,7 +13,7 @@
 #include <utility>
 #include <string>
 
-constexpr std::array<ParameterIndex, 24> PARAMETERS = {{
+constexpr std::array<ParameterIndex, 27> PARAMETERS = {{
     {"sigma_psip",  0},
     {"sigma_chic2", 1},
     {"sigma_chic1", 2},
@@ -41,7 +41,11 @@ constexpr std::array<ParameterIndex, 24> PARAMETERS = {{
     {"br_jpsi_mm", 21},
 
     {"L_CMS", 22},
-    {"L_ATLAS", 23}
+    {"L_ATLAS", 23},
+
+    {"norm_costh_1", 24},
+    {"norm_costh_2", 25},
+    {"norm_costh_3", 26},
   }};
 
 /**
@@ -58,13 +62,32 @@ public:
   GlobalLikelihood(const CrossSectionMeasurement& psi2S_ATLAS, const CrossSectionMeasurement& psi2S_CMS,
                    const CrossSectionMeasurement& chic2_ATLAS, const CrossSectionMeasurement& chic1_ATLAS,
                    const CrossSectionMeasurement& jpsi_CMS, const CrossSectionMeasurement& chic_ratio_CMS,
+                   const PolarizationMeasurement& psi2S_CMS_p, const PolarizationMeasurement& jpsi_CMS_p,
+                   const std::vector<PtCosthRatioMeasurement> chic_costh_ratios_CMS) :
+    m_psi2S_ATLAS_cs(psi2S_ATLAS), m_psi2S_CMS_cs(psi2S_CMS), m_chic2_ATLAS_cs(chic2_ATLAS),
+    m_chic1_ATLAS_cs(chic1_ATLAS), m_jpsi_CMS_cs(jpsi_CMS), m_chic_ratio_CMS_cs(chic_ratio_CMS),
+    m_psi2S_CMS_pol(psi2S_CMS_p), m_jpsi_CMS_pol(jpsi_CMS_p), m_chic_ratios_CMS_pol(chic_costh_ratios_CMS)
+  {
+    setupFit();
+  }
+
+  GlobalLikelihood(const CrossSectionMeasurement& psi2S_ATLAS, const CrossSectionMeasurement& psi2S_CMS,
+                   const CrossSectionMeasurement& chic2_ATLAS, const CrossSectionMeasurement& chic1_ATLAS,
+                   const CrossSectionMeasurement& jpsi_CMS, const CrossSectionMeasurement& chic_ratio_CMS,
                    const PolarizationMeasurement& psi2S_CMS_p, const PolarizationMeasurement& jpsi_CMS_p) :
     m_psi2S_ATLAS_cs(psi2S_ATLAS), m_psi2S_CMS_cs(psi2S_CMS), m_chic2_ATLAS_cs(chic2_ATLAS),
     m_chic1_ATLAS_cs(chic1_ATLAS), m_jpsi_CMS_cs(jpsi_CMS), m_chic_ratio_CMS_cs(chic_ratio_CMS),
     m_psi2S_CMS_pol(psi2S_CMS_p), m_jpsi_CMS_pol(jpsi_CMS_p)
   {
+    // if no costh ratios are used, some parts of the setups have to be done
+    // differently. Most importantly, the start parameters vector has to be
+    // correctly resized, and the initialization of the normalizations can be
+    // omitted.
+    m_useCosthRatios = false;
+    m_startParams.resize(mapSize(PARAMETERS) - 3);
     setupFit();
   }
+
 
   /**
    * Evaluate the likelihood with the given parameters
@@ -129,6 +152,9 @@ private:
 
   PolarizationMeasurement m_psi2S_CMS_pol;
   PolarizationMeasurement m_jpsi_CMS_pol;
+
+  std::vector<PtCosthRatioMeasurement> m_chic_ratios_CMS_pol;
+  bool m_useCosthRatios{true};
 
   ParamsSettings m_startParams{mapSize(PARAMETERS)}; // default initialize
   std::vector<std::pair<int, NuissanceParameter>> m_nuissParams;
@@ -264,10 +290,47 @@ double GlobalLikelihood::operator()(const double* p) const
                                      B_PSIP_CHIC2[0] * B_CHIC2_JPSI[0] / br_c2_jpsi / br_psip_c2},
                                  M_JPSI);
 
+
+  if (m_useCosthRatios) {
+
+    const std::array<double, 3> normalizations = {
+      p[IPAR("norm_costh_1")],
+      p[IPAR("norm_costh_2")],
+      p[IPAR("norm_costh_3")]
+    };
+
+    // costh ratios CMS
+    for (size_t iPtBin = 0; iPtBin < normalizations.size(); ++iPtBin) {
+      double lambda1, lambda2;
+
+      const auto& ratioData = m_chic_ratios_CMS_pol[iPtBin];
+
+      std::tie(std::ignore, lambda1) = crossSecAndLambda(ratioData.first, 0.5 / M_JPSI,
+                                                         {chic1XSecModel, psi2SXSecModel},
+                                                         {chi1PolModel,psi2SPolModel},
+                                                         {id, lambdaPsiToChi1},
+                                                         {1.0, B_PSIP_CHIC1[0] / br_psip_c1});
+
+      std::tie(std::ignore, lambda2) = crossSecAndLambda(ratioData.first, 0.5 / M_JPSI,
+                                                         {chic2XSecModel, psi2SXSecModel},
+                                                         {chi2PolModel, psi2SPolModel},
+                                                         {id, lambdaPsiToChi2},
+                                                         {1.0, B_PSIP_CHIC2[0] / br_psip_c2});
+
+      CosthRatioModel costhRatioModel = [lambda2, lambda1, normalizations, iPtBin] (double costh) {
+        return costhRatio(costh, lambda2, lambda1, normalizations[iPtBin]);
+      };
+
+      loglike += loglikeCosthRatio(ratioData.second, costhRatioModel);
+    }
+  }
+
+
+
+  // nuissance parameters
   for (const auto& nuissPar : m_nuissParams) {
     loglike += nuissPar.second(p[nuissPar.first]);
   }
-
 
   return -loglike;
 }
@@ -309,6 +372,12 @@ void GlobalLikelihood::defineStartParams()
 
   setParam("L_CMS", 1, 0.01);
   setParam("L_ATLAS", 1, 0.01);
+
+  if (m_useCosthRatios) {
+    setParam("norm_costh_1", 0.45, 0.1);
+    setParam("norm_costh_2", 0.45, 0.1);
+    setParam("norm_costh_3", 0.45, 0.1);
+  }
 }
 
 void GlobalLikelihood::addNuissances()

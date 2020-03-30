@@ -17,6 +17,9 @@
 
 struct CrossSectionData {
 
+  CrossSectionData(const double ptm, const double lo, const double hi) :
+    ptM(ptm), xSec(0), uncer(0), K(0), low(lo), high(hi) {}
+
   CrossSectionData(std::string line) {
     std::stringstream sline(line);
     sline >> this->ptM;
@@ -181,6 +184,14 @@ struct CosthRatioData {
 };
 
 using CosthRatioMeasurement = std::vector<CosthRatioData>;
+
+struct BinInfo {
+  double ptM;
+  double low;
+  double high;
+};
+
+using PtCosthRatioMeasurement = std::pair<BinInfo, CosthRatioMeasurement>;
 
 /**
  * Overload for CosthRatioData

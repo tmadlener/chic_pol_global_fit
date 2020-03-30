@@ -6,7 +6,10 @@
 #include "TFile.h"
 #include "TTree.h"
 
+#include <fstream>
 #include <string>
+#include <iostream>
+
 
 std::vector<double> to_frac(const std::vector<double>& lambdas)
 {
@@ -18,12 +21,36 @@ std::vector<double> to_frac(const std::vector<double>& lambdas)
   return fracs;
 }
 
-void global_fit(const std::string scanFileName="results/scan_file.root",
-                unsigned nScanPoints1=26,
-                unsigned nScanPoints2=26,
-                const double fLow1=0, const double fHigh1=1,
-                const double fLow2=0, const double fHigh2=1)
+std::vector<PtCosthRatioMeasurement> read_costh_ratios(const std::string& configfile)
 {
+  std::ifstream cfile(configfile);
+  std::string line;
+
+  if (!cfile) {
+    std::cerr << "Could not open file: " << configfile << std::endl;
+  }
+
+  std::vector<PtCosthRatioMeasurement> data;
+
+  while(std::getline(cfile, line)) {
+    std::stringstream sline(line);
+    double ptM, low, high;
+    std::string ratiofile;
+    sline >> ptM >> low >> high >> ratiofile;
+
+    ptM /= M_JPSI; // convert pT from configfile to pt/M
+    low /= M_JPSI;
+    high /= M_JPSI;
+
+    BinInfo point{ptM, low, high};
+
+    data.emplace_back(point, readData<CosthRatioData>(ratiofile));
+  }
+
+  return data;
+}
+
+GlobalLikelihood get_likelihood(bool useCosthRatios) {
   // cross section data
   const auto psi2S_ATLAS_cs = readData<CrossSectionData>("data/ATLAS_psi2S_cross_section.dat");
   const auto psi2S_CMS_cs = readData<CrossSectionData>("data/CMS_psi2S_cross_section.dat");
@@ -36,17 +63,28 @@ void global_fit(const std::string scanFileName="results/scan_file.root",
   const auto psi2S_CMS_pol = readData<PolarizationData>("data/CMS_psi2S_polarization.dat");
   const auto jpsi_CMS_pol = readData<PolarizationData>("data/CMS_jpsi_polarization.dat");
 
-
-
-  GlobalLikelihood likelihood(psi2S_ATLAS_cs, psi2S_CMS_cs, chic2_ATLAS_cs, chic1_ATLAS_cs,
-                              jpsi_CMS_cs, chic_ratio_CMS_cs, psi2S_CMS_pol, jpsi_CMS_pol);
-
-  // fix all nuissances
-  for (const auto* par : {"L_CMS", "L_ATLAS", "br_psip_dp", "br_psip_mm",
-        "br_psip_c2", "br_psip_c1", "br_psip_jpsi", "br_c2_jpsi", "br_c1_jpsi", "br_jpsi_mm"}) {
-    likelihood.fixParameter(par, 1);
+  if (!useCosthRatios) {
+    return GlobalLikelihood(psi2S_ATLAS_cs, psi2S_CMS_cs, chic2_ATLAS_cs, chic1_ATLAS_cs,
+                            jpsi_CMS_cs, chic_ratio_CMS_cs, psi2S_CMS_pol, jpsi_CMS_pol);
   }
 
+  const auto chic_ratios_CMS_pol = read_costh_ratios("data/chic_ratios.conf");
+
+  return GlobalLikelihood(psi2S_ATLAS_cs, psi2S_CMS_cs, chic2_ATLAS_cs, chic1_ATLAS_cs,
+                          jpsi_CMS_cs, chic_ratio_CMS_cs, psi2S_CMS_pol, jpsi_CMS_pol,
+                          chic_ratios_CMS_pol);
+
+
+}
+
+void global_fit(const std::string& scanFileName="results/scan_file.root",
+                unsigned nScanPoints1=26,
+                unsigned nScanPoints2=26,
+                const double fLow1=0, const double fHigh1=1,
+                const double fLow2=0, const double fHigh2=1,
+                const bool useCosthRatios=true)
+{
+  GlobalLikelihood likelihood = get_likelihood(useCosthRatios);
 
   LikelihoodFitter fitter;
 

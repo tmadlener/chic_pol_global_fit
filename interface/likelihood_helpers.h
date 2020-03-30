@@ -12,6 +12,7 @@
 using CSModel = std::function<double(double)>;
 using PolModel = std::function<double(double)>;
 using PolFeedDownTrafo = std::function<double(double)>;
+using CosthRatioModel = std::function<double(double)>;
 
 double power_law(double x, double beta, double gamma)
 {
@@ -291,7 +292,30 @@ double lambdaPsiToChi2(const double lambdaPsi) {
 
 
 
+/**
+ * Analytic costh ratio function
+ */
+double costhRatio(const double costh, const double lamD, const double lamN, const double norm)
+{
+  return norm * (1 + lamN * costh * costh) / (1 + lamD * costh * costh);
+}
 
+double loglikeCosthRatio(const CosthRatioMeasurement& data,
+                         const CosthRatioModel& model)
+{
+  double loglike = 0;
+
+  for (const auto& point : data) {
+    const double pred = model(point.costh);
+    // use the correct uncertainties depending on where the prediction lies
+    // relative to the data. prediction above data, means upper uncertainties.
+    const double uncer = (pred > point.ratio) ? point.u_high : point.u_low;
+    const double relDiff = (pred - point.ratio) / uncer;
+    loglike += -0.5 * relDiff * relDiff;
+  }
+
+  return loglike;
+}
 
 
 

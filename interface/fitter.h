@@ -11,6 +11,8 @@
 #include "TRandom3.h"
 
 #include <iostream>
+#include <algorithm>
+#include <cmath>
 
 class LikelihoodFitter {
 public:
@@ -72,7 +74,7 @@ void LikelihoodFitter::Scan(const LLH& llh, const ScanSettings& scanSettings, TT
     return;
   }
 
-  std::vector<double> values(params.size() + 1);
+  std::vector<double> values(params.size());
 
   for (size_t i=0; i < params.size(); ++i) {
     tree->Branch(params[i].Name().c_str(), &values[i]);
@@ -125,19 +127,15 @@ void LikelihoodFitter::Scan(const LLH& llh, const ScanSettings& scanSettings, TT
 
       goodFit = 0;
 
-      if (FitFromParams(llh, params)) {
+      const auto& parResults = fitter.Result().Parameters();
+      if (FitFromParams(llh, params) &&
+          std::none_of(parResults.cbegin(), parResults.cend(), [] (double d) { return std::isnan(d); })) {
         goodFit = 1;
       }
 
-      values.assign(fitter.Result().Parameters().cbegin(), fitter.Result().Parameters().cend());
+      values.assign(parResults.cbegin(), parResults.cend());
       llh_val = fitter.Result().MinFcnValue();
       tree->Fill();
-
-      // update the starting parameters for the next fit
-      for (const auto iPar : freeParams) {
-        params[iPar].SetValue(values[iPar]);
-      }
-
 
       count++;
       printProgress<PrintStyle::ProgressText>(count, total - 1, startTime, 100);
