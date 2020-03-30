@@ -96,18 +96,23 @@ def main(args):
     """Main"""
     llh_data = load_data(args.scanfile)
 
-    contour = get_contour_graph(llh_data, args.conf_level,
-                                args.variable_x, args.variable_y,
-                                args.transform_x, args.transform_y)
+    conf_levels = [float(s) for s in args.conf_levels.split(',')]
 
     outfile = r.TFile(args.outfile, 'recreate')
     outfile.cd()
     name_x = get_var_name(args.variable_x, args.transform_x)
     name_y = get_var_name(args.variable_y, args.transform_y)
 
-    contour.SetName('_'.join(['contour', name_x, name_y,
-                              str(args.conf_level).replace('.', '0')]))
-    contour.Write()
+    for conf_l in conf_levels:
+        contour = get_contour_graph(llh_data, conf_l,
+                                    args.variable_x, args.variable_y,
+                                    args.transform_x, args.transform_y)
+
+
+        contour.SetName('_'.join(['contour', name_x, name_y,
+                                  str(conf_l).replace('.', 'p')]))
+        contour.Write()
+
     outfile.Close()
 
 
@@ -119,19 +124,18 @@ if __name__ == '__main__':
                         'results from the scan')
     parser.add_argument('-o', '--outfile', help='File to which the TGraph '
                         'contour will be stored', default='contour_graph.root')
-    parser.add_argument('-vx', '--variable_x', help='Variable to use for the '
+    parser.add_argument('-vx', '--variable-x', help='Variable to use for the '
                         'horizontal direction', default='lambda_1')
-    parser.add_argument('-vy', '--variable_y', help='Variable to use for the '
+    parser.add_argument('-vy', '--variable-y', help='Variable to use for the '
                         'vertical direction', default='lambda_2')
-    parser.add_argument('-tx', '--transform_x', help='Transformation to apply to'
+    parser.add_argument('-tx', '--transform-x', help='Transformation to apply to'
                         ' the variable on the horizontal axis (identity or '
                         'frac_to_lam)', default='identity')
-    parser.add_argument('-ty', '--transform_y', help='Transformation to apply to'
+    parser.add_argument('-ty', '--transform-y', help='Transformation to apply to'
                         ' the variable on the vertical axis (identity or '
                         'frac_to_lam)', default='identity')
-    parser.add_argument('-cl', '--conf-level', help='The CL level (0, 1) for '
-                        'which the contour should be obtained', default=0.68,
-                        type=float)
+    parser.add_argument('-cl', '--conf-levels', help='The CL levels (0, 1) for '
+                        'which the contour should be obtained', default='0.68')
 
 
     clargs = parser.parse_args()
