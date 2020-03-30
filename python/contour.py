@@ -89,7 +89,7 @@ def get_var_name(var, trans):
     """Get the variable name for storing the contour"""
     if trans == 'identity':
         return var
-    return var.replace('f_long', 'lambda')
+    return var.replace('f_long_c', 'lambda_')
 
 
 def main(args):
