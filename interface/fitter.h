@@ -8,7 +8,6 @@
 #include "Fit/Fitter.h"
 #include "Math/MinimizerOptions.h"
 #include "TTree.h"
-#include "TRandom3.h"
 
 #include <iostream>
 #include <algorithm>
@@ -94,19 +93,11 @@ void LikelihoodFitter::Scan(const LLH& llh, const ScanSettings& scanSettings, TT
   llh_val = fitter.Result().MinFcnValue();
   tree->Fill();
 
-  // get the internal indices of the parameters that are not fixed fro scanning
-  std::vector<int> freeParams;
-  for (size_t i=0; i < llh.nPars(); ++i) {freeParams.push_back(i);}
-  std::pair<int, int> parIdcs;
-
-  parIdcs.first = llh.getParIdx(scanSettings.first.name);
-  freeParams.erase(std::find(freeParams.cbegin(), freeParams.cend(), parIdcs.first));
-  parIdcs.second = llh.getParIdx(scanSettings.second.name);
-  freeParams.erase(std::find(freeParams.cbegin(), freeParams.cend(), parIdcs.second));
-
-
-  delete gRandom;
-  gRandom = new TRandom3(0);
+  // get the internal indices of the parameters that are fixed
+  const std::pair<int, int> parIdcs = {
+    llh.getParIdx(scanSettings.first.name),
+    llh.getParIdx(scanSettings.second.name)
+  };
 
   auto startTime = ProgressClock::now();
   size_t count{};
