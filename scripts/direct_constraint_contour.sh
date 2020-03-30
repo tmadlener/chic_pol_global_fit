@@ -8,10 +8,10 @@ MAINDIR=${SCRIPTDIR}/../
 
 
 OUTDIR=${MAINDIR}/results/
-mkdir -p ${OUTDIR}
+mkdir -p ${OUTDIR}/contours/
 
 SCANFILE=${OUTDIR}/costh_chi2_scan.root
-CONTOURFILE=${OUTDIR}/contours_direct_constraints.root
+CONTOURFILE=${OUTDIR}/contours/contours_direct_constraints.root
 
 
 # Run the costh fit. Nothing to do here, everything is fixed
