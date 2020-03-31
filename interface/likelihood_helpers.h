@@ -4,6 +4,8 @@
 #include "data_structures.h"
 #include "constants.h"
 
+#include "TGraphAsymmErrors.h"
+
 #include <cmath>
 #include <functional>
 #include <utility>
@@ -292,6 +294,60 @@ double loglikeCosthRatio(const CosthRatioMeasurement& data,
   }
 
   return loglike;
+}
+
+const std::vector<double> getCorrectionFactors(const CrossSectionMeasurement& data,
+                                               const std::vector<CSModel>& csModels,
+                                               const std::vector<PolModel>& polModels,
+                                               const std::vector<PolFeedDownTrafo>& fdTrafos,
+                                               const std::vector<double> brFracs,
+                                               const double globNuiss,
+                                               const double mass)
+{
+  std::vector<double> corrections;
+  for (const auto& point : data) {
+    double lambda;
+    std::tie(std::ignore, lambda) = crossSecAndLambda(point, 0.5 / mass,
+                                                      csModels, polModels, fdTrafos, brFracs);
+
+    corrections.push_back(acceptanceCorrection(point.K, lambda) * globNuiss);
+  }
+
+  return corrections;
+}
+
+
+TGraphAsymmErrors correctGraph(const CrossSectionMeasurement& data, const char* name,
+                                   const std::vector<double>& corrFactors)
+{
+  auto graph = asTGraph(data);
+
+  for (int i = 0; i < graph.GetN(); ++i) {
+    double x, y;
+    graph.GetPoint(i, x, y);
+    graph.SetPoint(i, x, y * corrFactors[i]);
+    graph.SetPointEYhigh(i, graph.GetErrorYhigh(i) * corrFactors[i]);
+    graph.SetPointEYlow(i, graph.GetErrorYlow(i) * corrFactors[i]);
+  }
+
+  graph.SetName(name);
+  return graph;
+}
+
+
+TGraphAsymmErrors correctedCSGraph(const CrossSectionMeasurement& data,
+                                   const std::vector<CSModel>& csModels,
+                                   const std::vector<PolModel>& polModels,
+                                   const std::vector<PolFeedDownTrafo>& fdTrafos,
+                                   const std::vector<double> brFracs,
+                                   const double globNuiss,
+                                   const double mass,
+                                   const char* name)
+{
+  const auto corrections = getCorrectionFactors(data, csModels, polModels, fdTrafos,
+                                                brFracs, globNuiss, mass);
+
+  return correctGraph(data, name, corrections);
 }
 
 

@@ -42,6 +42,8 @@ public:
 
   void PrintResults() { fitter.GetMinimizer()->PrintResults(); }
 
+  const ROOT::Fit::FitResult& Result() const { return fitter.Result(); }
+
 private:
 
   template<typename LLH>

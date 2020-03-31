@@ -78,11 +78,13 @@ GlobalLikelihood get_likelihood(bool useCosthRatios) {
 }
 
 void global_fit(const std::string& scanFileName="results/scan_file.root",
+                const std::string& graphFileName="results/fit_result_graphs.root",
                 unsigned nScanPoints1=26,
                 unsigned nScanPoints2=26,
                 const double fLow1=0, const double fHigh1=1,
                 const double fLow2=0, const double fHigh2=1,
-                const bool useCosthRatios=true)
+                const bool useCosthRatios=true,
+                const bool storeGraphs=true)
 {
   GlobalLikelihood likelihood = get_likelihood(useCosthRatios);
 
@@ -104,4 +106,14 @@ void global_fit(const std::string& scanFileName="results/scan_file.root",
 
   scanTree->Write("", TObject::kWriteDelete);
   scanFile->Close();
+
+  if (storeGraphs) {
+    TFile* graphFile = new TFile(graphFileName.c_str(), "recreate");
+    for (const auto& graph : likelihood.getDataGraphs(fitter.Result())) {
+      graph.Write();
+    }
+
+    graphFile->Close();
+  }
+
 }

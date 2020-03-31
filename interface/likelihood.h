@@ -7,6 +7,8 @@
 #include "simple_compile_time_map.h"
 
 #include "Fit/ParameterSettings.h"
+#include "Fit/FitResult.h"
+#include "TGraphAsymmErrors.h"
 
 #include <vector>
 #include <array>
@@ -116,6 +118,8 @@ public:
     par.Fix();
   }
 
+  std::vector<TGraphAsymmErrors> getDataGraphs(const ROOT::Fit::FitResult& fitResult) const;
+
 private:
   /**
    * set up everything that is needed so that is needed for the fit
@@ -151,7 +155,7 @@ private:
   /**
    * Polarization models of the directly produced states as a function of pT/M
    */
-  PolModel getPsiSPolModel(const double* p) const;
+  PolModel getPsiPolModel(const double* p) const;
   PolModel getChi1PolModel(const double* p) const;
   PolModel getChi2PolModel(const double* p) const;
 
@@ -229,7 +233,7 @@ CSModel GlobalLikelihood::getJpsiXSecModel(const double* p) const
   };
 }
 
-PolModel GlobalLikelihood::getPsiSPolModel(const double* p) const
+PolModel GlobalLikelihood::getPsiPolModel(const double* p) const
 {
   const double f_long_psi = p[IPAR("f_long_psi")];
   const double beta_trans_psi = p[IPAR("beta_trans_psi")];
@@ -279,7 +283,7 @@ double GlobalLikelihood::operator()(const double* p) const
   const double br_jpsi_mm = p[IPAR("br_jpsi_mm")];
 
   const auto psi2SXSecModel = getPsi2SXSecModel(p);
-  const auto psiPolModel = getPsiSPolModel(p);
+  const auto psiPolModel = getPsiPolModel(p);
 
   const Identity<double> id;
 
@@ -477,5 +481,111 @@ void GlobalLikelihood::addNuissanceParameter(const std::string& name, const T& p
   const auto index = IPAR(name.c_str());
   m_nuissParams.push_back({index, {par}});
 }
+
+
+std::vector<TGraphAsymmErrors> GlobalLikelihood::getDataGraphs(const ROOT::Fit::FitResult& fitResult) const
+{
+  const auto parValues = fitResult.Parameters();
+  std::vector<TGraphAsymmErrors> graphs;
+
+  const double L_CMS = parValues[IPAR("L_CMS")];
+  const double br_psip_mm = parValues[IPAR("br_psip_mm")];
+
+  const auto psi2SXSecModel = getPsi2SXSecModel(parValues.data());
+  const auto psiPolModel = getPsiPolModel(parValues.data());
+
+  Identity<double> id;
+
+  graphs.push_back(correctedCSGraph(m_psi2S_CMS_cs, {psi2SXSecModel}, {psiPolModel}, {id}, {1.0},
+                                    L_CMS * br_psip_mm, M_PSI2S, "psi2S_CMS_cs"));
+
+
+  const double L_ATLAS = parValues[IPAR("L_ATLAS")];
+  const double br_psip_dp = parValues[IPAR("br_psip_dp")];
+  const double br_jpsi_mm = parValues[IPAR("br_jpsi_mm")];
+
+  graphs.push_back(correctedCSGraph(m_psi2S_ATLAS_cs, {psi2SXSecModel}, {psiPolModel}, {id}, {1.0},
+                                    L_ATLAS * br_psip_dp * br_jpsi_mm, M_PSI2S, "psi2S_ATLAS_cs"));
+
+
+  const double br_c1_jpsi = parValues[IPAR("br_c1_jpsi")];
+  const double br_psip_c1 = parValues[IPAR("br_psip_c1")];
+
+  const auto chi1XSecModel = getChi1XSecModel(parValues.data());
+  const auto chi1PolModel = getChi1PolModel(parValues.data());
+
+  graphs.push_back(correctedCSGraph(m_chic1_ATLAS_cs, {chi1XSecModel, psi2SXSecModel},
+                                    {chi1PolModel, psiPolModel}, {id, lambdaPsiToChi1},
+                                    {1.0, B_PSIP_CHIC1[0] / br_psip_c1},
+                                    L_ATLAS * br_c1_jpsi * br_jpsi_mm, M_CHIC1,
+                                    "chic1_ATLAS_cs"));
+
+
+  const double br_c2_jpsi = parValues[IPAR("br_c2_jpsi")];
+  const double br_psip_c2 = parValues[IPAR("br_psip_c2")];
+
+  const auto chi2XSecModel = getChi2XSecModel(parValues.data());
+  const auto chi2PolModel = getChi2PolModel(parValues.data());
+
+  graphs.push_back(correctedCSGraph(m_chic2_ATLAS_cs, {chi2XSecModel, psi2SXSecModel},
+                                    {chi2PolModel, psiPolModel}, {id, lambdaPsiToChi2},
+                                    {1.0, B_PSIP_CHIC2[0] / br_psip_c2},
+                                    L_ATLAS * br_c2_jpsi * br_jpsi_mm, M_CHIC2,
+                                    "chic2_ATLAS_cs"));
+
+
+  // chic ratios first have to compute the corrections individually
+
+  const auto chi1Corrections = getCorrectionFactors(m_chic_ratio_CMS_cs,
+                                                    {chi1XSecModel, psi2SXSecModel},
+                                                    {chi1PolModel, psiPolModel}, {id, lambdaPsiToChi1},
+                                                    {1.0, B_PSIP_CHIC1[0] / br_psip_c1},
+                                                    L_ATLAS * br_c1_jpsi * br_jpsi_mm, M_JPSI);
+
+  const auto chi2Corrections = getCorrectionFactors(m_chic_ratio_CMS_cs,
+                                                    {chi2XSecModel, psi2SXSecModel},
+                                                    {chi2PolModel, psiPolModel}, {id, lambdaPsiToChi2},
+                                                    {1.0, B_PSIP_CHIC2[0] / br_psip_c2},
+                                                    L_ATLAS * br_c2_jpsi * br_jpsi_mm, M_JPSI);
+
+  std::vector<double> ratioCorrections;
+  for (size_t i = 0; i < chi1Corrections.size(); ++i) {
+    ratioCorrections.push_back(chi2Corrections[i] / chi1Corrections[i]);
+  }
+
+  graphs.push_back(correctGraph(m_chic_ratio_CMS_cs, "chic_ratio_CMS_cs", ratioCorrections));
+
+
+
+  const double br_psip_jpsi = parValues[IPAR("br_psip_jpsi")];
+  const auto jpsiXSecModel = getJpsiXSecModel(parValues.data());
+
+  graphs.push_back(correctedCSGraph(m_jpsi_CMS_cs,
+                                    {jpsiXSecModel, chi1XSecModel, chi2XSecModel, psi2SXSecModel,
+                                        psi2SXSecModel, psi2SXSecModel},
+                                    {psiPolModel, chi1PolModel, chi2PolModel, psiPolModel,
+                                        psiPolModel, psiPolModel},
+                                    {id, id, id, id, lambdaPsiToChi1, lambdaPsiToChi2},
+                                    {1.0, B_CHIC1_JPSI[0] / br_c1_jpsi, B_CHIC2_JPSI[0] / br_c2_jpsi,
+                                        B_PSIP_JPSI[0] / br_psip_jpsi,
+                                        B_PSIP_CHIC1[0] * B_CHIC1_JPSI[0] / br_c1_jpsi / br_psip_c1,
+                                        B_PSIP_CHIC2[0] * B_CHIC2_JPSI[0] / br_c2_jpsi / br_psip_c2},
+                                    L_CMS * br_jpsi_mm, M_JPSI,
+                                    "jpsi_CMS_cs"));
+
+
+  // Polarizations
+  graphs.push_back(asTGraph(m_psi2S_CMS_pol));
+  graphs.back().SetName("psi2S_CMS_pol");
+
+  graphs.push_back(asTGraph(m_jpsi_CMS_pol));
+  graphs.back().SetName("jpsi_CMS_pol");
+
+  // TODO: chic polarization ratios
+
+  return graphs;
+}
+
+
 
 #endif
