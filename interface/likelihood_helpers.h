@@ -50,14 +50,6 @@ double weightedLambda(const std::vector<double>& lambdas, const std::vector<doub
 }
 
 /**
- * Convenience wrapper for two lambdas and weights
- */
-double weightedLambda(const double lambda1, const double lambda2, const double w1, const double w2)
-{
-  return weightedLambda({lambda1, lambda2}, {w1, w2});
-}
-
-/**
  * lambda theta assuming a fully transverse and a fully longitudinal component
  * given the fraction of the longitudinal component
  */
@@ -77,21 +69,6 @@ double lambdaTheta(double ptm, double fLong, double betaLong, double betaTrans, 
 
   return lambdath(contLong / (contLong + contTrans));
 }
-
-double lambdaChic(double ptm, double fLong, double betaLong, double betaTrans, double gamma, double lambdaPsi, double fDir)
-{
-  const double lambdaChiDir = lambdaTheta(ptm, fLong, betaLong, betaTrans, gamma);
-  return weightedLambda(lambdaChiDir, lambdaPsi / (4 + lambdaPsi), fDir, 1 - fDir);
-}
-
-double lambdaJpsi(double lambdaPsi, double lambdaChic1, double lambdaChic2,
-                  double fdir, double fchic1, double fchic2)
-{
-  const double fpsi = 1 - (fdir + fchic1 + fchic2);
-  return weightedLambda({lambdaPsi, lambdaPsi, lambdaChic1, lambdaChic2},
-                        {fdir, fpsi, fchic1, fchic2});
-}
-
 
 /**
  * Calculate the polarization dependent correction for the measured cross section
