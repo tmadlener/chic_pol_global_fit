@@ -7,16 +7,19 @@
 SCRIPTDIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)"
 MAINDIR=${SCRIPTDIR}/../
 
+low=$1
+high=$2
+steps=$3
 
 OUTDIR=${MAINDIR}/results/
 mkdir -p ${OUTDIR}/contours/
 
-SCANFILE=${OUTDIR}/scan_regular_lambda_all_constraints.root
+SCANFILE=${OUTDIR}/scan_regular_lambda_all_constraints_lambda2_${low}_${high}_${steps}.root
 CONTOURFILE=${OUTDIR}/contours/contours_all_constraints.root
 
 ${MAINDIR}/bin/run_fit --outfile ${SCANFILE} \
-              --flow1 -1.5 --fhigh1 1.5 --nscan1 16 \
-              --flow2 -1.65 --fhigh2 1.65 --nscan2 16 \
+              --flow1 -1.5 --fhigh1 1.5 --nscan1 151 \
+              --flow2 ${low} --fhigh2 ${high} --nscan2 ${steps} \
 
 
 python ${MAINDIR}/python/contour.py --variable-x "f_long_c1" --transform-x "frac_to_lam" \
