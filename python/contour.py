@@ -85,6 +85,25 @@ def get_contour_graph(data, conf_level, var_x, var_y,
     return r.TGraph(len(hull.vertices) + 1, xcont, ycont)
 
 
+def get_best_fit_graph(data, var_x, var_y,
+                       tf_x='identity', tf_y='identity'):
+    """Get the two-dimensional best fit point"""
+    trans_f_x = globals()[tf_x]
+    trans_f_y = globals()[tf_y]
+
+    llh_min = data.llh.min()
+
+    # In case the scan file has been merged from more than one scans, the
+    # minimum will be present more than once
+    min_data = data[data.llh == llh_min]
+    if data.shape[1] > 0:
+        min_data = min_data.iloc[0]
+
+    return r.TGraph(1, np.array(trans_f_x(min_data.loc[var_x])),
+                    np.array(trans_f_y(min_data.loc[var_y])))
+
+
+
 def get_var_name(var, trans):
     """Get the variable name for storing the contour"""
     if trans == 'identity':
@@ -96,14 +115,12 @@ def main(args):
     """Main"""
     llh_data = load_data(args.scanfile)
 
-    conf_levels = [float(s) for s in args.conf_levels.split(',')]
-
     outfile = r.TFile(args.outfile, 'recreate')
     outfile.cd()
     name_x = get_var_name(args.variable_x, args.transform_x)
     name_y = get_var_name(args.variable_y, args.transform_y)
 
-    for conf_l in conf_levels:
+    for conf_l in args.conf_levels:
         contour = get_contour_graph(llh_data, conf_l,
                                     args.variable_x, args.variable_y,
                                     args.transform_x, args.transform_y)
@@ -112,6 +129,12 @@ def main(args):
         contour.SetName('_'.join(['contour', name_x, name_y,
                                   str(conf_l).replace('.', 'p')]))
         contour.Write()
+
+
+    best_fit = get_best_fit_graph(llh_data, args.variable_x, args.variable_y,
+                                  args.transform_x, args.transform_y)
+    best_fit.SetName('_'.join(['best', 'fit', name_x, name_y]))
+    best_fit.Write()
 
     outfile.Close()
 
@@ -135,7 +158,8 @@ if __name__ == '__main__':
                         ' the variable on the vertical axis (identity or '
                         'frac_to_lam)', default='identity')
     parser.add_argument('-cl', '--conf-levels', help='The CL levels (0, 1) for '
-                        'which the contour should be obtained', default='0.68')
+                        'which the contour should be obtained', default='0.68',
+                        type=lambda s: [float(v) for v in s.split(',')])
 
 
     clargs = parser.parse_args()
