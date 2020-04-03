@@ -24,12 +24,7 @@ void costh_fit(const std::string& outfile="results/costh_scan.root")
   TFile* scanFile = new TFile(outfile.c_str(), "recreate");
   TTree* scanTree = new TTree("log_like_scan", "log likelihood scan values");
 
-  const ScanSettings scanParameters = {{linspace(-2., 2., 100), "lambda_1"},
-                                       {linspace(-2., 2., 100), "lambda_2"}};
-
-  fitter.Scan(likelihood,
-              scanParameters,
-              scanTree);
+  fitter.RandomScan(likelihood, scanTree);
 
   scanTree->Write("", TObject::kWriteDelete);
   scanFile->Close();

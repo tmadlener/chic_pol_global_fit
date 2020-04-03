@@ -79,11 +79,7 @@ GlobalLikelihood get_likelihood(bool useCosthRatios) {
 
 void global_fit(const std::string& scanFileName="results/scan_file.root",
                 const std::string& graphFileName="results/fit_result_graphs.root",
-                unsigned nScanPoints1=26,
-                unsigned nScanPoints2=26,
-                const double fLow1=0, const double fHigh1=1,
-                const double fLow2=0, const double fHigh2=1,
-                const bool useCosthRatios=true,
+                unsigned nSamplePoints=1000000, const bool useCosthRatios=true,
                 const bool storeGraphs=true)
 {
   GlobalLikelihood likelihood = get_likelihood(useCosthRatios);
@@ -92,17 +88,13 @@ void global_fit(const std::string& scanFileName="results/scan_file.root",
 
   fitter.Fit(likelihood);
 
-  // make the scanning linear in the lambdas instead of the fractions
-  const auto lambda1 = linspace(fLow1, fHigh1, nScanPoints1);
-  const auto lambda2 = linspace(fLow2, fHigh2, nScanPoints2);
-
   TFile* scanFile = new TFile(scanFileName.c_str(), "recreate");
   TTree* scanTree = new TTree("log_like_scan", "log likelihood scan values");
 
-  const ScanSettings scanParameters = {{to_frac(lambda2), "f_long_c2"},
-                                       {to_frac(lambda1), "f_long_c1"}};
 
-  fitter.Scan(likelihood, scanParameters, scanTree);
+  // Using maxDeltaLLH = 50, allows to go to a deltaChi2 value of 100, which
+  // should be enough for the most important purposes
+  fitter.RandomScan(likelihood, scanTree, nSamplePoints, 50);
 
   scanTree->Write("", TObject::kWriteDelete);
   scanFile->Close();

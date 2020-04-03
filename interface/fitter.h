@@ -2,6 +2,7 @@
 #define H_FITTER__
 
 #include "data_structures.h"
+#include "multivariate_normal_distribution.h"
 #include "progress.h"
 
 #include "Math/Minimizer.h"
@@ -12,6 +13,7 @@
 #include <iostream>
 #include <algorithm>
 #include <cmath>
+#include <numeric>
 
 class LikelihoodFitter {
 public:
@@ -39,6 +41,10 @@ public:
 
   template<typename LLH>
   void Scan(const LLH& llh, const ScanSettings& scanSettings, TTree* tree);
+
+  template<typename LLH>
+  void RandomScan(const LLH& llh, TTree* tree, const size_t nSamples=1000000,
+                  const double maxDeltaLLH=std::numeric_limits<double>::max());
 
   void PrintResults() { fitter.GetMinimizer()->PrintResults(); }
 
@@ -138,6 +144,68 @@ void LikelihoodFitter::Scan(const LLH& llh, const ScanSettings& scanSettings, TT
   }
 
   fitter.Config().MinimizerOptions().SetPrintLevel(oldPrintLevel);
+}
+
+
+template<typename LLH>
+void LikelihoodFitter::RandomScan(const LLH& llh, TTree* tree, const size_t nSamples, const double maxDeltaLLH)
+{
+  // avoid too much output from the fitter
+  const int oldPrintLevel = fitter.Config().MinimizerOptions().PrintLevel();
+  fitter.Config().MinimizerOptions().SetPrintLevel(0);
+
+  const auto& params = fitter.Config().ParamsSettings();
+
+  // first do a fit with the usual settings just to make sure that the scan is done around the minimum
+  if (!FitFromParams(llh, params)) {
+    std::cerr << "Could not find a valid minimum to scan around\n";
+    return;
+  }
+  fitter.Config().MinimizerOptions().SetPrintLevel(oldPrintLevel);
+
+  std::vector<double> values(params.size());
+  for (size_t i=0; i < params.size(); ++i) {
+    tree->Branch(params[i].Name().c_str(), &values[i]);
+  }
+  double llh_val;
+  tree->Branch("llh", &llh_val);
+
+  // fill the minimum in any case
+  values.assign(fitter.Result().Parameters().cbegin(), fitter.Result().Parameters().cend());
+  llh_val = fitter.Result().MinFcnValue();
+  tree->Fill();
+
+  const double min_llh = llh_val;
+
+
+  std::vector<double> covMatrix(params.size() * params.size());
+  if (fitter.Result().CovMatrixStatus() != 3) {
+    std::cerr << "WARNING: cov matrix status != 3\n";
+  }
+  if (!fitter.GetMinimizer()->GetCovMatrix(covMatrix.data())) {
+    std::cerr << "Could not get covariance matrix\n";
+    return;
+  };
+
+  auto means = fitter.Result().Parameters();
+  const MultivariateNormalDistribution multiVarNorm(means, covMatrix);
+  size_t stored = 0;
+
+  const auto startTime = ProgressClock::now();
+  for (size_t i = 0; i < nSamples; ++i) {
+    const auto pars = multiVarNorm();
+    llh_val = llh(pars.data());
+
+    if (!std::isnan(llh_val) && (llh_val - min_llh) < maxDeltaLLH) {
+      values.assign(pars.cbegin(), pars.cend());
+      tree->Fill();
+      stored++;
+    }
+
+    printProgress(i, nSamples - 1, startTime, 100);
+  }
+  std::cout << "Generated " << nSamples << " random sampling points and stored "
+            << stored << " evaluations of the likelihood\n";
 }
 
 #endif

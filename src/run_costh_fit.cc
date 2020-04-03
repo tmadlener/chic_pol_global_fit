@@ -8,7 +8,7 @@
 int main(int argc, char* argv[])
 {
   ArgParser parser(argc, argv);
-  const auto outfile = parser.getOptionVal<std::string>("--outfile", "costh_scan.root");
+  const auto outfile = parser.getOptionVal<std::string>("--outfile", "results/costh_scan.root");
 
   costh_fit(outfile);
   return 0;
