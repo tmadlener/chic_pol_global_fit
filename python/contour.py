@@ -19,15 +19,7 @@ from utils.data_handling import get_dataframe, apply_selections
 from utils.hist_utils import get_array, get_binning
 from utils.selection_functions import select_bin
 
-
-def frac_to_lam(frac):
-    """Transform a longitudinal fraction into a lambda value"""
-    return (1 - 3 * frac) / (1 + frac)
-
-
-def identity(x):
-    """Identity function"""
-    return x
+from common_helpers import frac_to_lam, identity, get_var_name
 
 
 def load_data(scanfile):
@@ -36,13 +28,16 @@ def load_data(scanfile):
 
     n_full = data.shape[0]
 
-    # remove all rows where the fit did not converge and where there are nan
-    # values for any of the fitted parameters
-    data = apply_selections(data, lambda d: d.goodFit == 1)
-    n_bad_fit = n_full - data.shape[0]
+    logging.info('Loaded %d rows of data', n_full)
 
-    logging.info('Loaded %d rows and removed %d because of no good',
-                 n_full, n_bad_fit)
+    # Check if the data come from a fit scan
+    if 'goodFit' in data.columns:
+        # remove all rows where the fit did not converge and where there are
+        # nan values for any of the fitted parameters
+        data = apply_selections(data, lambda d: d.goodFit == 1)
+        n_bad_fit = n_full - data.shape[0]
+
+        logging.info('Removed %d because of no good fit', n_bad_fit)
 
     return data
 
@@ -101,14 +96,6 @@ def get_best_fit_graph(data, var_x, var_y,
 
     return r.TGraph(1, np.array(trans_f_x(min_data.loc[var_x])),
                     np.array(trans_f_y(min_data.loc[var_y])))
-
-
-
-def get_var_name(var, trans):
-    """Get the variable name for storing the contour"""
-    if trans == 'identity':
-        return var
-    return var.replace('f_long_c', 'lambda_')
 
 
 def main(args):
