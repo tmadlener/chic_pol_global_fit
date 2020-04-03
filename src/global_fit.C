@@ -73,9 +73,8 @@ GlobalLikelihood get_likelihood(bool useCosthRatios) {
   return GlobalLikelihood(psi2S_ATLAS_cs, psi2S_CMS_cs, chic2_ATLAS_cs, chic1_ATLAS_cs,
                           jpsi_CMS_cs, chic_ratio_CMS_cs, psi2S_CMS_pol, jpsi_CMS_pol,
                           chic_ratios_CMS_pol);
-
-
 }
+
 
 void global_fit(const std::string& scanFileName="results/scan_file.root",
                 const std::string& graphFileName="results/fit_result_graphs.root",
@@ -89,14 +88,19 @@ void global_fit(const std::string& scanFileName="results/scan_file.root",
   fitter.Fit(likelihood);
 
   TFile* scanFile = new TFile(scanFileName.c_str(), "recreate");
-  TTree* scanTree = new TTree("log_like_scan", "log likelihood scan values");
 
+  if (nSamplePoints > 0) {
+    TTree* scanTree = new TTree("log_like_scan", "log likelihood scan values");
+    // Using maxDeltaLLH = 25, allows to go to a deltaChi2 value of 25 which
+    // should be enough for almost everything
+    fitter.RandomScan(likelihood, scanTree, nSamplePoints, 25);
+    scanTree->Write("", TObject::kWriteDelete);
+  }
 
-  // Using maxDeltaLLH = 50, allows to go to a deltaChi2 value of 100, which
-  // should be enough for the most important purposes
-  fitter.RandomScan(likelihood, scanTree, nSamplePoints, 50);
+  TTree* resultTree = new TTree("fit_result", "fit result information");
+  fitter.storeFitResult(resultTree);
+  resultTree->Write();
 
-  scanTree->Write("", TObject::kWriteDelete);
   scanFile->Close();
 
   if (storeGraphs) {

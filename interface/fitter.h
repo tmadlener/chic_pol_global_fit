@@ -26,7 +26,6 @@ public:
     // fitter.Config().SetMinosErrors(true);
   }
 
-
   /**
    * Run the fit
    */
@@ -38,7 +37,6 @@ public:
     return ret;
   }
 
-
   template<typename LLH>
   void Scan(const LLH& llh, const ScanSettings& scanSettings, TTree* tree);
 
@@ -49,6 +47,47 @@ public:
   void PrintResults() { fitter.GetMinimizer()->PrintResults(); }
 
   const ROOT::Fit::FitResult& Result() const { return fitter.Result(); }
+
+  std::vector<double> GetCovMatrix() const {
+    if (fitter.Result().CovMatrixStatus() != 3) {
+      std::cerr << "WARNING: cov matrix status != 3\n";
+      return {};
+    }
+
+    // fill the covariance matrix fully, instead of only elements below the
+    // diagonal. This is done because than the transformation to an
+    // Eigen::Matrix can be done very easily.
+    const size_t nPars = fitter.Result().Parameters().size();
+    std::vector<double> covMatrix(nPars * nPars);
+    for (size_t i = 0; i < nPars; ++i) {
+      for (size_t j = 0; j < nPars; ++j) {
+        covMatrix[i * nPars + j] = fitter.Result().CovMatrix(i, j);
+      }
+    }
+
+    return covMatrix;
+  }
+
+  /**
+   * store the parameter values, the covariance matrix (as 1D vector) and the
+   * likelihood value at the minimum
+   */
+  void storeFitResult(TTree* tree)
+  {
+    auto* params = new std::vector<double>(fitter.Result().Parameters());
+    tree->Branch("parameters", &params);
+
+    auto* covMatrix = new std::vector<double>(GetCovMatrix());
+    tree->Branch("cov_matrix", &covMatrix);
+
+    double minVal = fitter.Result().MinFcnValue();
+    tree->Branch("min_llh", &minVal);
+
+    tree->Fill();
+
+    delete params;
+    delete covMatrix;
+  }
 
 private:
 
@@ -177,15 +216,10 @@ void LikelihoodFitter::RandomScan(const LLH& llh, TTree* tree, const size_t nSam
 
   const double min_llh = llh_val;
 
-
-  std::vector<double> covMatrix(params.size() * params.size());
-  if (fitter.Result().CovMatrixStatus() != 3) {
-    std::cerr << "WARNING: cov matrix status != 3\n";
-  }
-  if (!fitter.GetMinimizer()->GetCovMatrix(covMatrix.data())) {
-    std::cerr << "Could not get covariance matrix\n";
+  std::vector<double> covMatrix = GetCovMatrix();
+  if (covMatrix.empty()) {
     return;
-  };
+  }
 
   auto means = fitter.Result().Parameters();
   const MultivariateNormalDistribution multiVarNorm(means, covMatrix);

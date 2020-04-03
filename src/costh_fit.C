@@ -10,6 +10,7 @@
 #include <iostream>
 #include <string>
 
+
 void costh_fit(const std::string& outfile="results/costh_scan.root")
 {
   const auto costh_ratio_8_12 = readData<CosthRatioData>("data/CMS_chic_costh_ratio_pt_8_12.dat");
@@ -25,6 +26,10 @@ void costh_fit(const std::string& outfile="results/costh_scan.root")
   TTree* scanTree = new TTree("log_like_scan", "log likelihood scan values");
 
   fitter.RandomScan(likelihood, scanTree);
+
+  TTree* resultTree = new TTree("fit_result", "fit result information");
+  fitter.storeFitResult(resultTree);
+  resultTree->Write();
 
   scanTree->Write("", TObject::kWriteDelete);
   scanFile->Close();

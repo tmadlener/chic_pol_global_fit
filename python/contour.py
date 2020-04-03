@@ -22,9 +22,9 @@ from utils.selection_functions import select_bin
 from common_helpers import frac_to_lam, identity, get_var_name
 
 
-def load_data(scanfile):
+def load_data(scanfile, tree='log_like_scan'):
     """Load the dataframe containing the scan results and do some cleanup"""
-    data = get_dataframe(scanfile)
+    data = get_dataframe(scanfile, treename=tree)
 
     n_full = data.shape[0]
 
