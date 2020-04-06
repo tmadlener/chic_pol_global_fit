@@ -21,10 +21,33 @@ from utils.selection_functions import select_bin
 
 from common_helpers import frac_to_lam, identity, get_var_name
 
+def has_branch(tree, branches):
+    """
+    Check whether the tree has all the branches
 
-def load_data(scanfile, tree='log_like_scan'):
+    Args:
+        tree (ROOT.TTree): TTree which should be checked
+        branches (or list of str): Names of the branches for which the existence
+            in the tree should be checked
+
+    Returns:
+        boolean: True if all branches exist in the TTree, False if one or more
+            are not existing
+    """
+    tree_branches = [b.GetName() for b in tree.GetListOfBranches()]
+    return all(b in tree_branches for b in branches)
+
+
+def load_data(scanfile, var_x, var_y, tree='log_like_scan'):
     """Load the dataframe containing the scan results and do some cleanup"""
-    data = get_dataframe(scanfile, treename=tree)
+    # Only load the necessary variables
+    load_vars = [var_x, var_y, 'llh']
+    rfile = r.TFile.Open(scanfile)
+    if has_branch(rfile.Get(tree), ['goodFit']):
+        load_vars.append('goodFit')
+    rfile.Close()
+
+    data = get_dataframe(scanfile, treename=tree, columns=load_vars)
 
     n_full = data.shape[0]
 
@@ -100,7 +123,7 @@ def get_best_fit_graph(data, var_x, var_y,
 
 def main(args):
     """Main"""
-    llh_data = load_data(args.scanfile)
+    llh_data = load_data(args.scanfile, args.variable_x, args.variable_y)
 
     outfile = r.TFile(args.outfile, 'recreate')
     outfile.cd()
