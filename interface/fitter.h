@@ -4,6 +4,7 @@
 #include "data_structures.h"
 #include "multivariate_normal_distribution.h"
 #include "progress.h"
+#include "matrix_helper.h"
 
 #include "Math/Minimizer.h"
 #include "Fit/Fitter.h"
@@ -42,6 +43,7 @@ public:
 
   template<typename LLH>
   void RandomScan(const LLH& llh, TTree* tree, const size_t nSamples=1000000,
+                  const std::vector<std::pair<int, double>>& covRedFactors={},
                   const double maxDeltaLLH=std::numeric_limits<double>::max());
 
   void PrintResults() { fitter.GetMinimizer()->PrintResults(); }
@@ -187,7 +189,9 @@ void LikelihoodFitter::Scan(const LLH& llh, const ScanSettings& scanSettings, TT
 
 
 template<typename LLH>
-void LikelihoodFitter::RandomScan(const LLH& llh, TTree* tree, const size_t nSamples, const double maxDeltaLLH)
+void LikelihoodFitter::RandomScan(const LLH& llh, TTree* tree, const size_t nSamples,
+                                  const std::vector<std::pair<int, double>>& covRedFactors,
+                                  const double maxDeltaLLH)
 {
   // avoid too much output from the fitter
   const int oldPrintLevel = fitter.Config().MinimizerOptions().PrintLevel();
@@ -220,6 +224,8 @@ void LikelihoodFitter::RandomScan(const LLH& llh, TTree* tree, const size_t nSam
   if (covMatrix.empty()) {
     return;
   }
+
+  covMatrix = change_variance(covMatrix, covRedFactors);
 
   auto means = fitter.Result().Parameters();
   const MultivariateNormalDistribution multiVarNorm(means, covMatrix);

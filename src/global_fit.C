@@ -9,6 +9,7 @@
 #include <fstream>
 #include <string>
 #include <iostream>
+#include <array>
 
 
 std::vector<double> to_frac(const std::vector<double>& lambdas)
@@ -78,6 +79,27 @@ GlobalLikelihood get_likelihood(bool useCosthRatios, const std::string& datadir=
 }
 
 
+template<typename LLH, size_t N>
+std::vector<std::pair<int, double>> getCovRedFactors(const LLH& llh, const std::array<const char*, N> params,
+                                                     const double redFact=5.0)
+{
+  std::vector<std::pair<int, double>> redFactors;
+  for (const auto* par : params) {
+    redFactors.emplace_back(llh.getParIdx(par), 1 / (redFact * redFact));
+  }
+
+  return redFactors;
+}
+
+constexpr std::array<const char*, 25> lambdaContNuissPars = {
+  "sigma_psip", "sigma_chic2", "sigma_chic1", "sigma_jpsi",
+  "f_long_psi", "gamma", "beta_long_psi", "beta_trans_psi", "beta_long_c1", "beta_trans_c1",
+  "beta_long_c2", "beta_trans_c2",
+  "br_psip_dp", "br_psip_mm", "br_psip_c2", "br_psip_c1", "br_psip_jpsi", "br_c2_jpsi",
+  "br_c1_jpsi", "br_jpsi_mm", "L_CMS", "L_ATLAS",
+  "norm_costh_1", "norm_costh_2", "norm_costh_3"};
+
+
 void global_fit(const std::string& scanFileName="results/scan_file.root",
                 const std::string& graphFileName="results/fit_result_graphs.root",
                 const std::string& dataDir="./data/",
@@ -94,9 +116,11 @@ void global_fit(const std::string& scanFileName="results/scan_file.root",
 
   if (nSamplePoints > 0) {
     TTree* scanTree = new TTree("log_like_scan", "log likelihood scan values");
-    // Using maxDeltaLLH = 25, allows to go to a deltaChi2 value of 25 which
+
+    const auto covRedFactors = getCovRedFactors(likelihood, lambdaContNuissPars);
+    // Using maxDeltaLLH = 2u, allows to go to a deltaChi2 value of 25 which
     // should be enough for almost everything
-    fitter.RandomScan(likelihood, scanTree, nSamplePoints, 25);
+    fitter.RandomScan(likelihood, scanTree, nSamplePoints, covRedFactors, 25);
     scanTree->Write("", TObject::kWriteDelete);
   }
 
