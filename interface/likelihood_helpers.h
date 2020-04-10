@@ -108,8 +108,6 @@ std::vector<double> partialCrossSections(const DataType& point, double step,
 {
   std::vector<double> partCS;
   for (size_t i = 0; i < csModels.size(); ++i) {
-
-
     partCS.push_back(sampleFunc(point.low, point.high + 1e-5, step, csModels[i]) * brFracs[i]);
   }
   return partCS;
@@ -154,6 +152,22 @@ std::pair<double, double> crossSecAndLambda(const DataType& point, double step,
 
   const double lambda = lambdaFeedDown(point.ptM, polModels, feedDownTrafos, polWeights);
   return {totalCS, lambda};
+}
+
+/**
+ * Overload for evaluating the cross sections at only one ptM point instead of
+ * integrating them over a whole bin
+ */
+std::pair<double, double> crossSecAndLambda(const double ptM,
+                                            const std::vector<CSModel>& csModels,
+                                            const std::vector<PolModel>& polModels,
+                                            const std::vector<PolFeedDownTrafo>& feedDownTrafos,
+                                            const std::vector<double>& brFracs)
+{
+  // constructing a "helper" BinInfo here in such a way that it will only be
+  // evaluated once at its minimum value during the call to sampleFunc in
+  // partialCrossSections
+  return crossSecAndLambda(BinInfo{ptM, ptM, ptM}, 1e9, csModels, polModels, feedDownTrafos, brFracs);
 }
 
 /**

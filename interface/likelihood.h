@@ -101,7 +101,7 @@ public:
    */
   size_t nPars() const { return m_startParams.size(); }
 
-  int getParIdx(const std::string& name) const { return IPAR(name.c_str()); }
+  static int getParIdx(const std::string& name) { return IPAR(name.c_str()); }
 
   /**
    * Get the start parameter settings (necessary to pass them to the fitter)
@@ -119,6 +119,21 @@ public:
   }
 
   std::vector<TGraphAsymmErrors> getDataGraphs(const ROOT::Fit::FitResult& fitResult) const;
+
+  /**
+   * Cross section models of the direct cross section as a function of pT/M
+   */
+  static CSModel getPsi2SXSecModel(const double* p);
+  static CSModel getChi1XSecModel(const double* p);
+  static CSModel getChi2XSecModel(const double* p);
+  static CSModel getJpsiXSecModel(const double* p);
+
+  /**
+   * Polarization models of the directly produced states as a function of pT/M
+   */
+  static PolModel getPsiPolModel(const double* p);
+  static PolModel getChi1PolModel(const double* p);
+  static PolModel getChi2PolModel(const double* p);
 
 private:
   /**
@@ -144,21 +159,6 @@ private:
    */
   void addNuissances();
 
-  /**
-   * Cross section models of the direct cross section as a function of pT/M
-   */
-  CSModel getPsi2SXSecModel(const double* p) const;
-  CSModel getChi1XSecModel(const double* p) const;
-  CSModel getChi2XSecModel(const double* p) const;
-  CSModel getJpsiXSecModel(const double* p) const;
-
-  /**
-   * Polarization models of the directly produced states as a function of pT/M
-   */
-  PolModel getPsiPolModel(const double* p) const;
-  PolModel getChi1PolModel(const double* p) const;
-  PolModel getChi2PolModel(const double* p) const;
-
   template<typename T>
   void addNuissanceParameter(const std::string& name, const T& par);
 
@@ -181,7 +181,7 @@ private:
 
 
 
-CSModel GlobalLikelihood::getPsi2SXSecModel(const double* p) const
+CSModel GlobalLikelihood::getPsi2SXSecModel(const double* p)
 {
   const double sigma_psip = p[IPAR("sigma_psip")];
   const double f_long_psi = p[IPAR("f_long_psi")];
@@ -194,7 +194,7 @@ CSModel GlobalLikelihood::getPsi2SXSecModel(const double* p) const
   };
 }
 
-CSModel GlobalLikelihood::getChi1XSecModel(const double* p) const
+CSModel GlobalLikelihood::getChi1XSecModel(const double* p)
 {
   const double sigma_chic1 = p[IPAR("sigma_chic1")];
   const double beta_long_c1 = p[IPAR("beta_long_c1")];
@@ -207,7 +207,7 @@ CSModel GlobalLikelihood::getChi1XSecModel(const double* p) const
   };
 }
 
-CSModel GlobalLikelihood::getChi2XSecModel(const double* p) const
+CSModel GlobalLikelihood::getChi2XSecModel(const double* p)
 {
   const double sigma_chic2 = p[IPAR("sigma_chic2")];
   const double beta_long_c2 = p[IPAR("beta_long_c2")];
@@ -220,7 +220,7 @@ CSModel GlobalLikelihood::getChi2XSecModel(const double* p) const
   };
 }
 
-CSModel GlobalLikelihood::getJpsiXSecModel(const double* p) const
+CSModel GlobalLikelihood::getJpsiXSecModel(const double* p)
 {
   const double sigma_jpsi = p[IPAR("sigma_jpsi")];
   const double f_long_psi = p[IPAR("f_long_psi")];
@@ -233,7 +233,7 @@ CSModel GlobalLikelihood::getJpsiXSecModel(const double* p) const
   };
 }
 
-PolModel GlobalLikelihood::getPsiPolModel(const double* p) const
+PolModel GlobalLikelihood::getPsiPolModel(const double* p)
 {
   const double f_long_psi = p[IPAR("f_long_psi")];
   const double beta_trans_psi = p[IPAR("beta_trans_psi")];
@@ -245,7 +245,7 @@ PolModel GlobalLikelihood::getPsiPolModel(const double* p) const
   };
 }
 
-PolModel GlobalLikelihood::getChi1PolModel(const double* p) const
+PolModel GlobalLikelihood::getChi1PolModel(const double* p)
 {
   const double beta_long_c1 = p[IPAR("beta_long_c1")];
   const double beta_trans_c1 = p[IPAR("beta_trans_c1")];
@@ -257,7 +257,7 @@ PolModel GlobalLikelihood::getChi1PolModel(const double* p) const
   };
 }
 
-PolModel GlobalLikelihood::getChi2PolModel(const double* p) const
+PolModel GlobalLikelihood::getChi2PolModel(const double* p)
 {
   const double beta_long_c2 = p[IPAR("beta_long_c2")];
   const double beta_trans_c2 = p[IPAR("beta_trans_c2")];
