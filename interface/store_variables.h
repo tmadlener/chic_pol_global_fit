@@ -33,6 +33,13 @@ struct StoreVariables {
   double lth_chic1_dir;
   double lth_chic2_dir;
 
+  double r_psip_chic2;
+  double r_psip_chic1;
+  double r_chic2_jpsi;
+  double r_chic1_jpsi;
+  double r_psip_jpsi;
+  double r_chic_jpsi;
+
   std::array<double, mapSize(PARAMETERS)> pVals{};
 };
 
@@ -55,6 +62,13 @@ TTree* StoreVariables::create()
   tree->Branch("chic2_cs_dir", &chic2_cs_dir);
   tree->Branch("lth_chic1_dir", &lth_chic1_dir);
   tree->Branch("lth_chic2_dir", &lth_chic2_dir);
+
+  tree->Branch("r_psip_chic2", &r_psip_chic2);
+  tree->Branch("r_psip_chic1", &r_psip_chic1);
+  tree->Branch("r_chic2_jpsi", &r_chic2_jpsi);
+  tree->Branch("r_chic1_jpsi", &r_chic1_jpsi);
+  tree->Branch("r_psip_jpsi", &r_psip_jpsi);
+  tree->Branch("r_chic_jpsi", &r_chic_jpsi);
 
 
   for (size_t iPar = 0; iPar < pVals.size(); ++iPar) {
@@ -118,25 +132,33 @@ bool StoreVariables::operator()(const double ptm, const std::vector<double>& p)
                                                       B_PSIP_CHIC2[0] * B_CHIC2_JPSI[0] / br_c2_jpsi / br_psip_c2});
 
 
+  // feed-down fractions
+  r_psip_chic1 = psip_cs * B_PSIP_CHIC1[0] / br_psip_c1 / chic1_cs;
+  r_psip_chic2 = psip_cs * B_PSIP_CHIC2[0] / br_psip_c2 / chic2_cs;
+
+  r_chic1_jpsi = chic1_cs * B_CHIC1_JPSI[0] / br_c1_jpsi / jpsi_cs;
+  r_chic2_jpsi = chic2_cs * B_CHIC2_JPSI[0] / br_c2_jpsi / jpsi_cs;
+  r_psip_jpsi = psip_cs * B_PSIP_JPSI[0] / br_psip_jpsi / jpsi_cs;
+  r_chic_jpsi = r_chic1_jpsi + r_chic2_jpsi;
+
   return valid();
 }
 
 bool StoreVariables::valid() const
 {
-  return !(  std::isnan(ptM) ||
-             std::isnan(psip_cs) ||
-             std::isnan(jpsi_cs) ||
-             std::isnan(chic1_cs) ||
-             std::isnan(chic2_cs) ||
-             std::isnan(lth_psip) ||
-             std::isnan(lth_jpsi) ||
-             std::isnan(lth_chic1) ||
-             std::isnan(lth_chic2) ||
-             std::isnan(jpsi_cs_dir) ||
-             std::isnan(chic1_cs_dir) ||
-             std::isnan(chic2_cs_dir) ||
-             std::isnan(lth_chic1_dir) ||
-             std::isnan(lth_chic2_dir));
+  return !(std::isnan(psip_cs) ||
+           std::isnan(jpsi_cs) ||
+           std::isnan(chic1_cs) ||
+           std::isnan(chic2_cs) ||
+           std::isnan(lth_psip) ||
+           std::isnan(lth_jpsi) ||
+           std::isnan(lth_chic1) ||
+           std::isnan(lth_chic2) ||
+           std::isnan(jpsi_cs_dir) ||
+           std::isnan(chic1_cs_dir) ||
+           std::isnan(chic2_cs_dir) ||
+           std::isnan(lth_chic1_dir) ||
+           std::isnan(lth_chic2_dir));
 }
 
 
