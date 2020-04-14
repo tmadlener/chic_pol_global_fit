@@ -68,11 +68,11 @@ void pTM_scan(const std::string& fitResultsFile,
   size_t valid = 0;
   size_t nProcessed = 0;
 
-  const auto ptMScanPoints = linspace(ptMmin, ptMmax, nPoints);
-
+  const auto ptMScanPoints = nPoints > 1 ? linspace(ptMmin, ptMmax, nPoints) : std::vector<double>{ptMmin};
   std::cout << "Starting scan of " << nPoints << " ptM points between " << ptMmin << " and " << ptMmax
             << " doing " << nScans << " random evaluations at each point\n";
   const auto startTime = ProgressClock::now();
+
   for (const double ptM : ptMScanPoints) {
     valid += scan_ptM_point(ptM, storeVars, multiVarNorm, scanTree, nScans);
     nProcessed += nScans;
