@@ -35,7 +35,7 @@ std::pair<std::vector<double>, std::vector<double>> readFitResults(const std::st
 }
 
 size_t scan_ptM_point(const double ptM, StoreVariables& storeVars,
-                    const MultivariateNormalDistribution& mvn, TTree* tree,
+                      const MultivariateNormalDistribution<>& mvn, TTree* tree,
                     size_t nscans=1000)
 {
   size_t nValid = 0;
@@ -58,7 +58,7 @@ void pTM_scan(const std::string& fitResultsFile,
   std::vector<double> cov;
 
   std::tie(params, cov) = readFitResults(fitResultsFile);
-  const MultivariateNormalDistribution multiVarNorm(params, cov);
+  const MultivariateNormalDistribution<> multiVarNorm(params, cov);
 
   StoreVariables storeVars;
   TFile* scanFile = new TFile(scanFileName.c_str(), "recreate");

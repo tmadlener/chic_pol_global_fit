@@ -14,7 +14,7 @@ int main(int, char**)
     1.4, 1
   };
 
-  MultivariateNormalDistribution mvn{a, c};
+  MultivariateNormalDistribution<> mvn{a, c};
 
   TFile* file = new TFile("test_multivar_norm_dist.root", "recreate");
   TTree* tree = new TTree("rand_vals", "random values sampled from multivariate normal distribution");

@@ -2,9 +2,11 @@
 #define H_MULTIVARIATE_NORMAL_DISTRIBUTON__
 
 #include "Eigen/Dense"
+
 #include <random>
 #include <vector>
 #include <iostream>
+#include <algorithm>
 
 
 /**
@@ -12,6 +14,7 @@
  *
  * see: https://stackoverflow.com/a/40245513
  */
+template<typename RNG=std::mt19937>
 class MultivariateNormalDistribution {
 public:
   MultivariateNormalDistribution(std::vector<double>& means,
@@ -26,15 +29,20 @@ public:
       std::cerr << "WARNING: covariance matrix is not positive definite!\n";
     }
     m_transform = solver.eigenvectors() * solver.eigenvalues().cwiseSqrt().asDiagonal();
+
+
+    // properly seed the mt19937 (see: https://codereview.stackexchange.com/a/109266)
+    std::array<unsigned, RNG::state_size * RNG::word_size> random_data;
+    std::random_device source{};
+    std::generate(random_data.begin(), random_data.end(), std::ref(source));
+    std::seed_seq seeds(random_data.begin(), random_data.end());
+    m_gen.seed(seeds);
   }
 
   std::vector<double> operator()() const
   {
-    static std::mt19937 gen{std::random_device{}()};
-    static std::normal_distribution<> dist;
-
     const Eigen::VectorXd vals = m_mean +
-      m_transform * Eigen::VectorXd{m_mean.size()}.unaryExpr([&](const double) { return dist(gen); });
+      m_transform * Eigen::VectorXd{m_mean.size()}.unaryExpr([&](const double) { return m_dist(m_gen); });
 
     return std::vector<double>(&vals[0], vals.data() + vals.size());
   }
@@ -42,6 +50,9 @@ public:
 private:
   Eigen::VectorXd m_mean;
   Eigen::MatrixXd m_transform;
+
+  mutable RNG m_gen{};
+  mutable std::normal_distribution<> m_dist;
 };
 
 

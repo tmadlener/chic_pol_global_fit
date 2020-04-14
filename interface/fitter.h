@@ -228,7 +228,7 @@ void LikelihoodFitter::RandomScan(const LLH& llh, TTree* tree, const size_t nSam
   covMatrix = change_variance(covMatrix, covRedFactors);
 
   auto means = fitter.Result().Parameters();
-  const MultivariateNormalDistribution multiVarNorm(means, covMatrix);
+  const MultivariateNormalDistribution<> multiVarNorm(means, covMatrix);
   size_t stored = 0;
 
   const auto startTime = ProgressClock::now();
