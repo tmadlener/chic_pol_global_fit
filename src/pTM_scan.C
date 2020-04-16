@@ -52,7 +52,8 @@ size_t scan_ptM_point(const double ptM, StoreVariables& storeVars,
 
 void pTM_scan(const std::string& fitResultsFile,
               const std::string& scanFileName,
-              const double ptMmin, const double ptMmax, const size_t nPoints, const size_t nScans)
+              const double ptMmin, const double ptMmax, const size_t nPoints, const size_t nScans,
+              const bool storeParams=true)
 {
   std::vector<double> params;
   std::vector<double> cov;
@@ -62,7 +63,7 @@ void pTM_scan(const std::string& fitResultsFile,
 
   StoreVariables storeVars;
   TFile* scanFile = new TFile(scanFileName.c_str(), "recreate");
-  TTree* scanTree = storeVars.create();
+  TTree* scanTree = storeVars.create(storeParams);
 
   const size_t nEvaluations = nPoints * nScans;
   size_t valid = 0;

@@ -11,9 +11,10 @@ int main(int argc, char* argv[])
   const auto ptmmax = parser.getOptionVal<double>("--ptmmax", 10.0);
   const auto npoints = parser.getOptionVal<size_t>("--npoints", 50);
   const auto nscans = parser.getOptionVal<size_t>("--nscans", 20000);
+  const auto noparams = parser.getOptionVal<bool>("--noparams", false);
 
 
-  pTM_scan(fitresult, outfile, ptmmin, ptmmax, npoints, nscans);
+  pTM_scan(fitresult, outfile, ptmmin, ptmmax, npoints, nscans, !noparams);
 
   return 0;
 }

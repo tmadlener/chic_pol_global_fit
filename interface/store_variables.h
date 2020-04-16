@@ -11,7 +11,7 @@
 
 struct StoreVariables {
 
-  TTree* create();
+  TTree* create(bool storeParams=true);
 
   bool operator()(const double ptm, const std::vector<double>& p);
 
@@ -46,7 +46,7 @@ struct StoreVariables {
   std::array<double, mapSize(PARAMETERS)> pVals{};
 };
 
-TTree* StoreVariables::create()
+TTree* StoreVariables::create(bool storeParams)
 {
   TTree* tree = new TTree("ptm_dep_scan", "values of random scans as a function of pT/M");
 
@@ -77,8 +77,10 @@ TTree* StoreVariables::create()
   tree->Branch("r_chic_jpsi", &r_chic_jpsi);
 
 
-  for (size_t iPar = 0; iPar < pVals.size(); ++iPar) {
-    tree->Branch(PARAMETERS[iPar].first, &pVals[iPar]);
+  if (storeParams) {
+    for (size_t iPar = 0; iPar < pVals.size(); ++iPar) {
+      tree->Branch(PARAMETERS[iPar].first, &pVals[iPar]);
+    }
   }
 
   return tree;
