@@ -11,6 +11,17 @@
 #include <iostream>
 #include <array>
 
+struct ScanArguments {
+  bool randomScan{false};
+  unsigned nSamplePoints{0};
+  double flow1{-1};
+  double fhigh1{1};
+  double flow2{-1};
+  double fhigh2{1};
+  unsigned nScan1{51};
+  unsigned nScan2{51};
+};
+
 
 std::vector<double> to_frac(const std::vector<double>& lambdas)
 {
@@ -53,7 +64,8 @@ std::vector<PtCosthRatioMeasurement> read_costh_ratios(const std::string& config
   return data;
 }
 
-GlobalLikelihood get_likelihood(bool useCosthRatios, const std::string& datadir="./data/") {
+GlobalLikelihood get_likelihood(bool useCosthRatios,
+                                const std::string& datadir="./data/") {
   // cross section data
   const auto psi2S_ATLAS_cs = readData<CrossSectionData>(datadir + "ATLAS_psi2S_cross_section.dat");
   const auto psi2S_CMS_cs = readData<CrossSectionData>(datadir + "CMS_psi2S_cross_section.dat");
@@ -103,8 +115,8 @@ constexpr std::array<const char*, 25> lambdaContNuissPars = {
 void global_fit(const std::string& scanFileName="results/scan_file.root",
                 const std::string& graphFileName="results/fit_result_graphs.root",
                 const std::string& dataDir="./data/",
-                unsigned nSamplePoints=1000000, const bool useCosthRatios=true,
-                const bool storeGraphs=true)
+                const ScanArguments& scanArgs=ScanArguments{},
+                const bool useCosthRatios=true, const bool storeGraphs=true)
 {
   GlobalLikelihood likelihood = get_likelihood(useCosthRatios, dataDir);
 
@@ -114,15 +126,31 @@ void global_fit(const std::string& scanFileName="results/scan_file.root",
 
   TFile* scanFile = new TFile(scanFileName.c_str(), "recreate");
 
-  if (nSamplePoints > 0) {
+  if (scanArgs.randomScan && scanArgs.nSamplePoints > 0) {
+      TTree* scanTree = new TTree("log_like_scan", "log likelihood scan values");
+
+      const auto covRedFactors = getCovRedFactors(likelihood, lambdaContNuissPars);
+      // Using maxDeltaLLH = 2u, allows to go to a deltaChi2 value of 25 which
+      // should be enough for almost everything
+      fitter.RandomScan(likelihood, scanTree, scanArgs.nSamplePoints, covRedFactors, 25);
+      scanTree->Write("", TObject::kWriteDelete);
+  }
+
+  if (scanArgs.nScan1 > 0 && scanArgs.nScan2 > 0) {
     TTree* scanTree = new TTree("log_like_scan", "log likelihood scan values");
 
-    const auto covRedFactors = getCovRedFactors(likelihood, lambdaContNuissPars);
-    // Using maxDeltaLLH = 2u, allows to go to a deltaChi2 value of 25 which
-    // should be enough for almost everything
-    fitter.RandomScan(likelihood, scanTree, nSamplePoints, covRedFactors, 25);
+    const auto lambda1 = linspace(scanArgs.flow1, scanArgs.fhigh1, scanArgs.nScan1);
+    const auto lambda2 = linspace(scanArgs.flow2, scanArgs.fhigh2, scanArgs.nScan2);
+
+    const ScanSettings scanParameters = {{to_frac(lambda1), "f_long_c1"},
+                                         {to_frac(lambda2), "f_long_c2"}};
+
+    fitter.Scan(likelihood, scanParameters, scanTree);
     scanTree->Write("", TObject::kWriteDelete);
   }
+
+  // if (nSamplePoints > 0) {
+  // }
 
   TTree* resultTree = new TTree("fit_result", "fit result information");
   fitter.storeFitResult(resultTree);
