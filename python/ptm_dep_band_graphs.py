@@ -17,9 +17,7 @@ logging.basicConfig(level=logging.INFO,
                     format='%(levelname)s - %(funcName)s: %(message)s')
 
 from utils.data_handling import get_dataframe
-from utils.misc_helpers import create_random_str, quantile
-from utils.hist_utils import hist1d
-from utils.plot_helpers import get_x_min, get_x_max
+from utils.misc_helpers import quantile
 
 from common_helpers import (
     get_var_name, get_variable_binning, frac_to_lam, identity
