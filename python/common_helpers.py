@@ -3,14 +3,42 @@
 Module containing some common helper functionality
 """
 import numpy as np
-
 from scipy.spatial import ConvexHull
-from scipy.optimize import root_scalar
 
 import ROOT as r
 
 from utils.hist_utils import hist2d, get_array, get_binning
 from utils.misc_helpers import quantile
+
+class RootResult(object):
+    """Helper class to mimic the result from root_scalar"""
+    def __init__(self, val):
+        self.root = val
+
+
+def secant(func, bracket, eps=1e-4, maxsteps=50, nsteps=0):
+    """Simple root finding for cases where scipy is not recent enough and
+    root_scalar is not present
+    """
+    x0, x1 = bracket
+    fx0 = func(x0)
+    fx1 = func(x1)
+    x2 = (x0 * fx1 - x1 * fx0) / (fx1 - fx0)
+
+    if np.abs(func(x2)) < eps:
+        return RootResult(x2)
+
+    if nsteps >= maxsteps:
+        print('Could not find root for function within {} steps'.format(maxsteps))
+        return None
+
+    return secant(func, [x0, x1], eps, maxsteps, nsteps + 1)
+
+try:
+    from scipy.optimize import root_scalar
+except ImportError: # scipy not recent enough
+    root_scalar = secant
+
 
 def frac_to_lam(frac):
     """Transform a longitudinal fraction into a lambda value"""
