@@ -34,6 +34,8 @@ struct StoreVariables {
   double lth_chic2_dir;
   double lth_jpsi_chic;
 
+  double dlth_jpsi_psip;
+
   double r_psip_chic2;
   double r_psip_chic1;
   double r_chic2_jpsi;
@@ -64,6 +66,8 @@ TTree* StoreVariables::create()
   tree->Branch("lth_chic1_dir", &lth_chic1_dir);
   tree->Branch("lth_chic2_dir", &lth_chic2_dir);
   tree->Branch("lth_jpsi_chic", &lth_jpsi_chic);
+
+  tree->Branch("dlth_jpsi_psip", &dlth_jpsi_psip);
 
   tree->Branch("r_psip_chic2", &r_psip_chic2);
   tree->Branch("r_psip_chic1", &r_psip_chic1);
@@ -144,6 +148,7 @@ bool StoreVariables::operator()(const double ptm, const std::vector<double>& p)
   r_chic_jpsi = r_chic1_jpsi + r_chic2_jpsi;
 
   lth_jpsi_chic = weightedLambda({lth_chic1, lth_chic2}, {r_chic1_jpsi / r_chic_jpsi, r_chic2_jpsi / r_chic_jpsi});
+  dlth_jpsi_psip = lth_jpsi - lth_psip;
 
   return valid();
 }
