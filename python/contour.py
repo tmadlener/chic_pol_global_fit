@@ -7,7 +7,6 @@ import numpy as np
 import ROOT as r
 r.PyConfig.IgnoreCommandLineOptions = True
 
-from scipy.spatial import ConvexHull
 from scipy.stats import chi2
 
 import logging
@@ -19,7 +18,9 @@ from utils.data_handling import get_dataframe, apply_selections
 from utils.hist_utils import get_array, get_binning
 from utils.selection_functions import select_bin
 
-from common_helpers import frac_to_lam, identity, get_var_name
+from common_helpers import (
+    frac_to_lam, identity, get_var_name, contour_as_tgraph
+)
 
 def has_branch(tree, branches):
     """
@@ -88,19 +89,7 @@ def get_contour_graph(data, conf_level, var_x, var_y,
 
     filled = np.array(sel_data.loc[:, [var_x, var_y]])
 
-
-    filled[:, 0] = trans_f_x(filled[:, 0])
-    filled[:, 1] = trans_f_y(filled[:, 1])
-
-    hull = ConvexHull(filled)
-
-    # "close" the contour by appending the first point again at the end
-    xcont = filled[hull.vertices, 0]
-    xcont = np.append(xcont, np.array(xcont[0]))
-    ycont = filled[hull.vertices, 1]
-    ycont = np.append(ycont, np.array(ycont[0]))
-
-    return r.TGraph(len(hull.vertices) + 1, xcont, ycont)
+    return contour_as_tgraph(filled)
 
 
 def get_best_fit_graph(data, var_x, var_y,
