@@ -18,10 +18,10 @@ SCANFILE=${OUTDIR}/scan_regular_lambda_all_constraints_lambda2_${low}_${high}_${
 CONTOURFILE=${OUTDIR}/contours/contours_all_constraints.root
 
 ${MAINDIR}/bin/run_fit --outfile ${SCANFILE} \
-              --flow1 -1.5 --fhigh1 1.5 --nscan1 151 \
+              --flow1 -1.5 --fhigh1 1.5 --nscan1 301 \
               --flow2 ${low} --fhigh2 ${high} --nscan2 ${steps} \
 
 
-python ${MAINDIR}/python/contour.py --variable-x "f_long_c1" --transform-x "frac_to_lam" \
-       --variable-y "f_long_c2" --transform-y "frac_to_lam" --conf-levels 0.683,0.955,0.973 \
-       --outfile ${CONTOURFILE} ${SCANFILE}
+# python ${MAINDIR}/python/contour.py --variable-x "f_long_c1" --transform-x "frac_to_lam" \
+#        --variable-y "f_long_c2" --transform-y "frac_to_lam" --conf-levels 0.683,0.955,0.973 \
+#        --outfile ${CONTOURFILE} ${SCANFILE}
