@@ -7,16 +7,17 @@ from scipy.spatial import ConvexHull
 
 import ROOT as r
 
-from utils.hist_utils import hist2d, get_array, get_binning
+from utils.hist_utils import hist2d, get_array, get_binning, find_bin
 from utils.misc_helpers import quantile
 
 class RootResult(object):
     """Helper class to mimic the result from root_scalar"""
-    def __init__(self, val):
+    def __init__(self, val, success=True):
         self.root = val
+        self.converged = success
 
 
-def secant(func, bracket, eps=1e-4, maxsteps=50, nsteps=0):
+def secant(func, bracket, eps=1e-4, maxsteps=100, nsteps=0):
     """Simple root finding for cases where scipy is not recent enough and
     root_scalar is not present
     """
@@ -29,8 +30,8 @@ def secant(func, bracket, eps=1e-4, maxsteps=50, nsteps=0):
         return RootResult(x2)
 
     if nsteps >= maxsteps:
-        print('Could not find root for function within {} steps'.format(maxsteps))
-        return None
+        print('Could not find root for function within {} steps. Value = {}'.format(maxsteps, func(x2)))
+        return RootResult(x2, False)
 
     return secant(func, [x0, x1], eps, maxsteps, nsteps + 1)
 
@@ -116,8 +117,14 @@ def get_coverage_contour(hist, coverage=0.683):
         """Calculate the coverage corresponding to the passed level"""
         return np.sum(vals * (vals >= level)) / sum_vals
 
+    # do some pre-processing to start from a slightly better bracket for the
+    # secant method
+    dec_cov = np.array([_coverage(0.05 * i * np.max(vals)) for i in xrange(21)])
+    q_bin = find_bin(dec_cov, np.array([coverage]))
+    search_brack = [q_bin * 0.05 * np.max(vals), (q_bin + 1) * 0.05 * np.max(vals)]
+
     cov_level = root_scalar(lambda x: _coverage(x) - coverage,
-                            bracket=[np.min(vals), np.max(vals)])
+                            bracket=search_brack, eps=1e-3)
 
     filled = vals >= cov_level.root
 
