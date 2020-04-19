@@ -65,10 +65,12 @@ public:
                    const CrossSectionMeasurement& chic2_ATLAS, const CrossSectionMeasurement& chic1_ATLAS,
                    const CrossSectionMeasurement& jpsi_CMS, const CrossSectionMeasurement& chic_ratio_CMS,
                    const PolarizationMeasurement& psi2S_CMS_p, const PolarizationMeasurement& jpsi_CMS_p,
-                   const std::vector<PtCosthRatioMeasurement> chic_costh_ratios_CMS) :
+                   const std::vector<PtCosthRatioMeasurement> chic_costh_ratios_CMS,
+                   const bool usePsiPol=true) :
     m_psi2S_ATLAS_cs(psi2S_ATLAS), m_psi2S_CMS_cs(psi2S_CMS), m_chic2_ATLAS_cs(chic2_ATLAS),
     m_chic1_ATLAS_cs(chic1_ATLAS), m_jpsi_CMS_cs(jpsi_CMS), m_chic_ratio_CMS_cs(chic_ratio_CMS),
-    m_psi2S_CMS_pol(psi2S_CMS_p), m_jpsi_CMS_pol(jpsi_CMS_p), m_chic_ratios_CMS_pol(chic_costh_ratios_CMS)
+    m_psi2S_CMS_pol(psi2S_CMS_p), m_jpsi_CMS_pol(jpsi_CMS_p), m_chic_ratios_CMS_pol(chic_costh_ratios_CMS),
+    m_usePsiPolarizations(usePsiPol)
   {
     setupFit();
   }
@@ -174,6 +176,7 @@ private:
 
   std::vector<PtCosthRatioMeasurement> m_chic_ratios_CMS_pol;
   bool m_useCosthRatios{true};
+  bool m_usePsiPolarizations{true};
 
   ParamsSettings m_startParams{mapSize(PARAMETERS)}; // default initialize
   std::vector<std::pair<int, NuissanceParameter>> m_nuissParams;
@@ -355,20 +358,22 @@ double GlobalLikelihood::operator()(const double* p) const
 
 
 
-  loglike += loglikePolarization(m_psi2S_CMS_pol, {psi2SXSecModel}, {psiPolModel}, {id}, {1.0}, M_PSI2S);
+  if (m_usePsiPolarizations) {
+    loglike += loglikePolarization(m_psi2S_CMS_pol, {psi2SXSecModel}, {psiPolModel}, {id}, {1.0}, M_PSI2S);
 
-  // same as above for the cross-sections. All contributions have to be considered individually
-  loglike += loglikePolarization(m_jpsi_CMS_pol,
-                                 {jpsiXSecModel, chic1XSecModel, chic2XSecModel, psi2SXSecModel,
-                                     psi2SXSecModel, psi2SXSecModel},
-                                 {psiPolModel, chi1PolModel, chi2PolModel, psiPolModel,
-                                     psiPolModel, psiPolModel},
-                                 {id, id, id, id, lambdaPsiToChi1, lambdaPsiToChi2},
-                                 {1.0, B_CHIC1_JPSI[0] / br_c1_jpsi, B_CHIC2_JPSI[0] / br_c2_jpsi,
-                                     B_PSIP_JPSI[0] / br_psip_jpsi,
-                                     B_PSIP_CHIC1[0] * B_CHIC1_JPSI[0] / br_c1_jpsi / br_psip_c1,
-                                     B_PSIP_CHIC2[0] * B_CHIC2_JPSI[0] / br_c2_jpsi / br_psip_c2},
-                                 M_JPSI);
+    // same as above for the cross-sections. All contributions have to be considered individually
+    loglike += loglikePolarization(m_jpsi_CMS_pol,
+                                   {jpsiXSecModel, chic1XSecModel, chic2XSecModel, psi2SXSecModel,
+                                       psi2SXSecModel, psi2SXSecModel},
+                                   {psiPolModel, chi1PolModel, chi2PolModel, psiPolModel,
+                                       psiPolModel, psiPolModel},
+                                   {id, id, id, id, lambdaPsiToChi1, lambdaPsiToChi2},
+                                   {1.0, B_CHIC1_JPSI[0] / br_c1_jpsi, B_CHIC2_JPSI[0] / br_c2_jpsi,
+                                       B_PSIP_JPSI[0] / br_psip_jpsi,
+                                       B_PSIP_CHIC1[0] * B_CHIC1_JPSI[0] / br_c1_jpsi / br_psip_c1,
+                                       B_PSIP_CHIC2[0] * B_CHIC2_JPSI[0] / br_c2_jpsi / br_psip_c2},
+                                   M_JPSI);
+  }
 
 
   if (m_useCosthRatios) {
@@ -429,17 +434,17 @@ void GlobalLikelihood::defineStartParams()
   setParam("sigma_chic1", 17.5, 10);
   setParam("sigma_jpsi", 19.8, 10);
 
-  setParam("f_long_psi", 0.3, 0.1, 0, 1);
-  setParam("f_long_c1", 0.11, 0.1, 0, 1);
-  setParam("f_long_c2", 0.5, 0.1, 0, 1);
+  setParam("f_long_psi", 0.4, 0.1, 0, 1);
+  setParam("f_long_c1", 0.11, 0.1);
+  setParam("f_long_c2", 0.5, 0.1);
 
-  setParam("gamma", 0.74, 0.1);
-  setParam("beta_long_psi", 3.3, 0.1);
+  setParam("gamma", 0.713, 0.1);
+  setParam("beta_long_psi", 3.5, 0.1);
   setParam("beta_trans_psi", 3.3, 0.1);
-  setParam("beta_long_c1", 3.3, 0.1);
-  setParam("beta_trans_c1", 3.3, 0.1);
+  setParam("beta_long_c1", 3.0, 0.1);
+  setParam("beta_trans_c1", 3.45, 0.1);
   setParam("beta_long_c2", 3.3, 0.1);
-  setParam("beta_trans_c2", 3.3, 0.1);
+  setParam("beta_trans_c2", 3.7, 0.1);
 
   setParam("br_psip_dp", 1, 0.01);
   setParam("br_psip_mm", 1, 0.01);

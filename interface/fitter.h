@@ -114,16 +114,15 @@ void LikelihoodFitter::Scan(const LLH& llh, const ScanSettings& scanSettings, TT
   const int oldPrintLevel = fitter.Config().MinimizerOptions().PrintLevel();
   fitter.Config().MinimizerOptions().SetPrintLevel(0);
 
-  // get a COPY here, in order to always start the fit at some "reasonable"
-  // starting point
-  auto params = fitter.Config().ParamsSettings();
-
   // first do a fit with the usual settings just to make sure that the scan is done around the minimum
-  if (!FitFromParams(llh, params)) {
+  if (!FitFromParams(llh, llh.getStartParams())) {
     std::cerr << "Could not find a valid minimum to scan around\n";
     return;
   }
 
+  // get a COPY here, in order to always start the fit at some "reasonable"
+  // starting point
+  auto params = fitter.Config().ParamsSettings();
   std::vector<double> values(params.size());
 
   for (size_t i=0; i < params.size(); ++i) {
@@ -131,7 +130,6 @@ void LikelihoodFitter::Scan(const LLH& llh, const ScanSettings& scanSettings, TT
   }
   double llh_val;
   tree->Branch("llh", &llh_val);
-
 
   // store all the obtained values, but make it possible to filter out
   // non-successful fits

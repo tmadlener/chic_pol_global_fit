@@ -21,6 +21,8 @@ int main(int argc, char* argv[])
   const auto flow2 = parser.getOptionVal<double>("--flow2", -1);
   const auto fhigh2 = parser.getOptionVal<double>("--fhigh2", 1);
   const auto randomScan = parser.getOptionVal<bool>("--randomScan", false);
+  const auto usePsiPolarizations = parser.getOptionVal<bool>("--usePsiPolarizations", true);
+
 
 
   ScanArguments scanArgs;
@@ -45,7 +47,7 @@ int main(int argc, char* argv[])
   }
 
 
-  global_fit(outfile, graphfile, datadir, scanArgs, useCosthRatios, !nographs);
+  global_fit(outfile, graphfile, datadir, scanArgs, useCosthRatios, !nographs, usePsiPolarizations);
   return 0;
 }
 #endif
