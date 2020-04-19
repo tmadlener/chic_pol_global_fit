@@ -88,9 +88,10 @@ if __name__ == '__main__':
     parser.add_argument('outdir', help='Directory into which the resulting files'
                         ' from the batch job will be put')
     parser.add_argument('--no-costh-ratios', help='Do not the chic costh ratio '
-                        'constraints', default=False)
+                        'constraints', default=False, action='store_true')
     parser.add_argument('--no-psi-polarization', help='Do not use the psi '
-                        'polarization constraints', default=False)
+                        'polarization constraints', default=False,
+                        action='store_true')
     parser.add_argument('-l1', '--lambda-low-1', help='Minimal value of lambda 1'
                         ' to be used in the scanning', default=-1.0,
                         type=float)
