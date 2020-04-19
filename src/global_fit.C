@@ -67,16 +67,16 @@ std::vector<PtCosthRatioMeasurement> read_costh_ratios(const std::string& config
 GlobalLikelihood get_likelihood(bool useCosthRatios, bool usePsiPol=true,
                                 const std::string& datadir="./data/") {
   // cross section data
-  const auto psi2S_ATLAS_cs = readData<CrossSectionData>(datadir + "ATLAS_psi2S_cross_section.dat");
-  const auto psi2S_CMS_cs = readData<CrossSectionData>(datadir + "CMS_psi2S_cross_section.dat");
-  const auto jpsi_CMS_cs = readData<CrossSectionData>(datadir + "CMS_jpsi_cross_section.dat");
-  const auto chic2_ATLAS_cs = readData<CrossSectionData>(datadir + "ATLAS_chic2_cross_section.dat");
-  const auto chic1_ATLAS_cs = readData<CrossSectionData>(datadir + "ATLAS_chic1_cross_section.dat");
-  const auto chic_ratio_CMS_cs = readData<CrossSectionData>(datadir + "CMS_chic_ratio_cross_section.dat");
+  const auto psi2S_ATLAS_cs = readData<CrossSectionData>(datadir + "/ATLAS_psi2S_cross_section.dat");
+  const auto psi2S_CMS_cs = readData<CrossSectionData>(datadir + "/CMS_psi2S_cross_section.dat");
+  const auto jpsi_CMS_cs = readData<CrossSectionData>(datadir + "/CMS_jpsi_cross_section.dat");
+  const auto chic2_ATLAS_cs = readData<CrossSectionData>(datadir + "/ATLAS_chic2_cross_section.dat");
+  const auto chic1_ATLAS_cs = readData<CrossSectionData>(datadir + "/ATLAS_chic1_cross_section.dat");
+  const auto chic_ratio_CMS_cs = readData<CrossSectionData>(datadir + "/CMS_chic_ratio_cross_section.dat");
 
   // // polarization data
-  const auto psi2S_CMS_pol = readData<PolarizationData>(datadir + "CMS_psi2S_polarization.dat");
-  const auto jpsi_CMS_pol = readData<PolarizationData>(datadir + "CMS_jpsi_polarization.dat");
+  const auto psi2S_CMS_pol = readData<PolarizationData>(datadir + "/CMS_psi2S_polarization.dat");
+  const auto jpsi_CMS_pol = readData<PolarizationData>(datadir + "/CMS_jpsi_polarization.dat");
 
   if (!useCosthRatios) {
     return GlobalLikelihood(psi2S_ATLAS_cs, psi2S_CMS_cs, chic2_ATLAS_cs, chic1_ATLAS_cs,
