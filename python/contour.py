@@ -88,6 +88,8 @@ def get_contour_graph(data, conf_level, var_x, var_y,
     sel_data = apply_selections(data, select_funcs)
 
     filled = np.array(sel_data.loc[:, [var_x, var_y]])
+    filled[:, 0] = trans_f_x(filled[:, 0])
+    filled[:, 1] = trans_f_y(filled[:, 1])
 
     return contour_as_tgraph(filled)
 
