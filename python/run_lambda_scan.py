@@ -24,7 +24,7 @@ def get_batch_base_command(outdir, use_costh, use_psi):
 def get_scan_commands(min_l1, max_l1, min_l2, max_l2, delta_l, n_jobs):
     """Get the parts of the command that specify which lambda ranges to scan"""
     # Scan the whole lambda_1 range in thin slices of lambda_2
-    n_points_1 = int((max_l1 - min_l1) / delta_l)
+    n_points_1 = int(round((max_l1 - min_l1) / delta_l))
     if min_l1 + delta_l * n_points_1 != max_l1:
         print('Range for lambda 1 is [{}, {}], grid spacing is {}. Cannot '
               'determine an integer number of scan points. Actual grid '
@@ -33,16 +33,16 @@ def get_scan_commands(min_l1, max_l1, min_l2, max_l2, delta_l, n_jobs):
     lambda_1_com = [
         "--flow1", str(min_l1),
         "--fhigh1", str(max_l1),
-        "--nscan1", str(n_points_1)
+        "--nscan1", str(n_points_1 + 1) # include the end-points
     ]
 
-    n_points_2 = int((max_l2 - min_l2) / delta_l)
+    n_points_2 = int(round((max_l2 - min_l2) / delta_l))
     if min_l2 + delta_l * n_points_2 != max_l2:
         print('Range for lambda 2 is [{}, {}], grid spacing is {}. Cannot '
               'determine an integer number of scan points. Actual grid '
               'spacing will be slightly different'.format(min_l2, max_l2, delta_l))
 
-    p_p_job = n_points_2 / n_jobs
+    p_p_job = (n_points_2 + 1) / n_jobs
 
     sub_coms = []
     for ijob in xrange(n_jobs - 1):
@@ -56,7 +56,7 @@ def get_scan_commands(min_l1, max_l1, min_l2, max_l2, delta_l, n_jobs):
 
     job_min = job_max + delta_l
     # make sure the last job contains all the remaining points
-    n_points = n_points_2 / n_jobs + n_points_2 % n_jobs
+    n_points = (n_points_2 + 1) / n_jobs + (n_points_2 + 1) % n_jobs
     sub_coms.append(
         lambda_1_com +
         ["--flow2", str(job_min), "--fhigh2", str(max_l2), "--nscan2", str(n_points)]
