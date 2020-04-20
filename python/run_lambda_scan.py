@@ -4,6 +4,8 @@ Script that launches a batch job for a lambda_2 vs lambda_1 scan
 """
 import os
 import subprocess
+import numpy as np
+
 
 BATCH_SCRIPT = os.path.join(os.environ['WORK'], 'chic_pol_global_fit',
                             'scripts', 'batch_run_fit.sh')
@@ -42,25 +44,16 @@ def get_scan_commands(min_l1, max_l1, min_l2, max_l2, delta_l, n_jobs):
               'determine an integer number of scan points. Actual grid '
               'spacing will be slightly different'.format(min_l2, max_l2, delta_l))
 
-    p_p_job = (n_points_2 + 1) / n_jobs
-
     sub_coms = []
-    for ijob in xrange(n_jobs - 1):
-        job_min = min_l2 + ijob * p_p_job * delta_l
-        # avoid running some scan points twice
-        job_max = min_l2 + (ijob + 1) * p_p_job * delta_l - delta_l
+    for scan_vals in np.array_split(np.linspace(min_l2, max_l2, n_points_2 + 1), n_jobs):
+        job_min = np.min(scan_vals)
+        job_max = np.max(scan_vals)
+        n_steps = len(scan_vals)
+
         sub_coms.append(
             lambda_1_com +
-            ["--flow2", str(job_min), "--fhigh2", str(job_max), "--nscan2", str(p_p_job)]
+            ["--flow2", str(job_min), "--fhigh2", str(job_max), "--nscan2", str(n_steps)]
         )
-
-    job_min = job_max + delta_l
-    # make sure the last job contains all the remaining points
-    n_points = (n_points_2 + 1) / n_jobs + (n_points_2 + 1) % n_jobs
-    sub_coms.append(
-        lambda_1_com +
-        ["--flow2", str(job_min), "--fhigh2", str(max_l2), "--nscan2", str(n_points)]
-    )
 
     return sub_coms
 
