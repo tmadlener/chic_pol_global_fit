@@ -4,6 +4,7 @@
 #include "data_structures.h"
 #include "constants.h"
 
+#include "TF1.h"
 #include "TGraphAsymmErrors.h"
 
 #include <cmath>
@@ -332,7 +333,7 @@ const std::vector<double> getCorrectionFactors(const CrossSectionMeasurement& da
 
 
 TGraphAsymmErrors correctGraph(const CrossSectionMeasurement& data, const char* name,
-                                   const std::vector<double>& corrFactors)
+                               const std::vector<double>& corrFactors)
 {
   auto graph = asTGraph(data);
 
@@ -364,6 +365,43 @@ TGraphAsymmErrors correctedCSGraph(const CrossSectionMeasurement& data,
   return correctGraph(data, name, corrections);
 }
 
+/**
+ * wrap the model in a lambda and evaluate it at x[0]
+ *
+ * NOTE: taking the model by const value to make sure everything that it is
+ * closed over is still present when it is actually evaluated
+ */
+template<typename Model>
+TF1 modelAsTF1(const Model model, const char* name, const double min, const double max)
+{
+  return TF1(name,
+             [model](double* x, double*) { return model(x[0]); },
+             min, max, 0);
+}
 
+/**
+ * Get the total model including feed-down contributions
+ *
+ * NOTE: Taking the CSModels and PolModels by const value to make sure
+ * everything that they close over is still present when it is actually
+ * evaluated
+ */
+std::pair<CSModel, PolModel> combineModels(const std::vector<CSModel> csModels,
+                                           const std::vector<PolModel> polModels,
+                                           const std::vector<PolFeedDownTrafo>& fdTrafos,
+                                           const std::vector<double> brFracs)
+{
+  const CSModel csModel = [=](double ptm) -> double {
+    const auto csLambda = crossSecAndLambda(ptm, csModels, polModels, fdTrafos, brFracs);
+    return csLambda.first;
+  };
+
+  const PolModel polModel = [=](double ptm) -> double {
+    const auto csLambda = crossSecAndLambda(ptm, csModels, polModels, fdTrafos, brFracs);
+    return csLambda.second;
+  };
+
+  return {csModel, polModel};
+}
 
 #endif

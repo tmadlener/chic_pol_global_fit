@@ -149,9 +149,6 @@ void global_fit(const std::string& scanFileName="results/scan_file.root",
     scanTree->Write("", TObject::kWriteDelete);
   }
 
-  // if (nSamplePoints > 0) {
-  // }
-
   TTree* resultTree = new TTree("fit_result", "fit result information");
   fitter.storeFitResult(resultTree);
   resultTree->Write();
@@ -162,6 +159,10 @@ void global_fit(const std::string& scanFileName="results/scan_file.root",
     TFile* graphFile = new TFile(graphFileName.c_str(), "recreate");
     for (const auto& graph : likelihood.getDataGraphs(fitter.Result())) {
       graph.Write();
+    }
+
+    for (const auto& model : likelihood.getBestFitModels(fitter.Result())) {
+      model.Write();
     }
 
     graphFile->Close();
