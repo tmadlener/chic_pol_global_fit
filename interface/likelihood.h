@@ -68,11 +68,11 @@ public:
                    const CrossSectionMeasurement& jpsi_CMS, const CrossSectionMeasurement& chic_ratio_CMS,
                    const PolarizationMeasurement& psi2S_CMS_p, const PolarizationMeasurement& jpsi_CMS_p,
                    const std::vector<PtCosthRatioMeasurement> chic_costh_ratios_CMS,
-                   const bool usePsiPol=true) :
+                   const bool usePsiPol=true, const bool clipCorrs=false) :
     m_psi2S_ATLAS_cs(psi2S_ATLAS), m_psi2S_CMS_cs(psi2S_CMS), m_chic2_ATLAS_cs(chic2_ATLAS),
     m_chic1_ATLAS_cs(chic1_ATLAS), m_jpsi_CMS_cs(jpsi_CMS), m_chic_ratio_CMS_cs(chic_ratio_CMS),
     m_psi2S_CMS_pol(psi2S_CMS_p), m_jpsi_CMS_pol(jpsi_CMS_p), m_chic_ratios_CMS_pol(chic_costh_ratios_CMS),
-    m_usePsiPolarizations(usePsiPol)
+    m_usePsiPolarizations(usePsiPol), m_clipCorrectionsPhysicalRange(clipCorrs)
   {
     setupFit();
   }
@@ -80,10 +80,11 @@ public:
   GlobalLikelihood(const CrossSectionMeasurement& psi2S_ATLAS, const CrossSectionMeasurement& psi2S_CMS,
                    const CrossSectionMeasurement& chic2_ATLAS, const CrossSectionMeasurement& chic1_ATLAS,
                    const CrossSectionMeasurement& jpsi_CMS, const CrossSectionMeasurement& chic_ratio_CMS,
-                   const PolarizationMeasurement& psi2S_CMS_p, const PolarizationMeasurement& jpsi_CMS_p) :
+                   const PolarizationMeasurement& psi2S_CMS_p, const PolarizationMeasurement& jpsi_CMS_p,
+                   const bool clipCorrs=false) :
     m_psi2S_ATLAS_cs(psi2S_ATLAS), m_psi2S_CMS_cs(psi2S_CMS), m_chic2_ATLAS_cs(chic2_ATLAS),
     m_chic1_ATLAS_cs(chic1_ATLAS), m_jpsi_CMS_cs(jpsi_CMS), m_chic_ratio_CMS_cs(chic_ratio_CMS),
-    m_psi2S_CMS_pol(psi2S_CMS_p), m_jpsi_CMS_pol(jpsi_CMS_p)
+    m_psi2S_CMS_pol(psi2S_CMS_p), m_jpsi_CMS_pol(jpsi_CMS_p), m_clipCorrectionsPhysicalRange(clipCorrs)
   {
     // if no costh ratios are used, some parts of the setups have to be done
     // differently. Most importantly, the start parameters vector has to be
@@ -93,7 +94,6 @@ public:
     m_startParams.resize(mapSize(PARAMETERS) - 3);
     setupFit();
   }
-
 
   /**
    * Evaluate the likelihood with the given parameters
@@ -189,6 +189,7 @@ private:
   std::vector<PtCosthRatioMeasurement> m_chic_ratios_CMS_pol;
   bool m_useCosthRatios{true};
   bool m_usePsiPolarizations{true};
+  bool m_clipCorrectionsPhysicalRange{false};
 
   ParamsSettings m_startParams{mapSize(PARAMETERS)}; // default initialize
   std::vector<std::pair<int, NuissanceParameter>> m_nuissParams;
@@ -305,12 +306,14 @@ double GlobalLikelihood::operator()(const double* p) const
   // psi(2S) CMS
   loglike += loglikeCrossSection(m_psi2S_CMS_cs,
                                  {psi2SXSecModel}, {psiPolModel}, {id}, {1.0},
-                                 L_CMS * br_psip_mm, M_PSI2S);
+                                 L_CMS * br_psip_mm, M_PSI2S,
+                                 m_clipCorrectionsPhysicalRange, {-1.0, 1.0});
 
   // psi(2S) ATLAS
   loglike += loglikeCrossSection(m_psi2S_ATLAS_cs,
                                  {psi2SXSecModel}, {psiPolModel}, {id}, {1.0},
-                                 L_ATLAS * br_psip_dp * br_jpsi_mm, M_PSI2S);
+                                 L_ATLAS * br_psip_dp * br_jpsi_mm, M_PSI2S,
+                                 m_clipCorrectionsPhysicalRange, {-1.0, 1.0});
 
   const double br_c2_jpsi = p[IPAR("br_c2_jpsi")];
   const double br_psip_c2 = p[IPAR("br_psip_c2")];
@@ -321,7 +324,8 @@ double GlobalLikelihood::operator()(const double* p) const
   loglike += loglikeCrossSection(m_chic2_ATLAS_cs,
                                  {chic2XSecModel, psi2SXSecModel}, {chi2PolModel, psiPolModel},
                                  {id, lambdaPsiToChi2}, {1.0, B_PSIP_CHIC2[0] / br_psip_c2},
-                                 L_ATLAS * br_c2_jpsi * br_jpsi_mm, M_CHIC2);
+                                 L_ATLAS * br_c2_jpsi * br_jpsi_mm, M_CHIC2,
+                                 m_clipCorrectionsPhysicalRange, {-0.6, 1.0});
 
 
 
@@ -333,7 +337,8 @@ double GlobalLikelihood::operator()(const double* p) const
   loglike += loglikeCrossSection(m_chic1_ATLAS_cs,
                                  {chic1XSecModel, psi2SXSecModel}, {chi1PolModel, psiPolModel},
                                  {id, lambdaPsiToChi1}, {1.0, B_PSIP_CHIC1[0] / br_psip_c1},
-                                 L_ATLAS * br_c1_jpsi * br_jpsi_mm, M_CHIC1);
+                                 L_ATLAS * br_c1_jpsi * br_jpsi_mm, M_CHIC1,
+                                 m_clipCorrectionsPhysicalRange, {-1./3., 1.0});
 
 
   const double br_psip_jpsi = p[IPAR("br_psip_jpsi")];
@@ -357,7 +362,8 @@ double GlobalLikelihood::operator()(const double* p) const
                                      B_PSIP_JPSI[0] / br_psip_jpsi,
                                      B_PSIP_CHIC1[0] * B_CHIC1_JPSI[0] / br_c1_jpsi / br_psip_c1,
                                      B_PSIP_CHIC2[0] * B_CHIC2_JPSI[0] / br_c2_jpsi / br_psip_c2},
-                                 L_CMS * br_jpsi_mm, M_JPSI);
+                                 L_CMS * br_jpsi_mm, M_JPSI,
+                                 m_clipCorrectionsPhysicalRange, {-1.0, 1.0});
 
 
   loglike += loglikeCrossSectionRatio(m_chic_ratio_CMS_cs,
@@ -366,7 +372,8 @@ double GlobalLikelihood::operator()(const double* p) const
                                       {id, lambdaPsiToChi2}, {id, lambdaPsiToChi1},
                                       {1.0, B_PSIP_CHIC2[0] / br_psip_c2},
                                       {1.0, B_PSIP_CHIC1[0] / br_psip_c1},
-                                      br_psip_c2 / br_psip_c1, M_JPSI);
+                                      br_psip_c2 / br_psip_c1, M_JPSI,
+                                      m_clipCorrectionsPhysicalRange, {-0.6, 1.0}, {-1./3., 1.0});
 
 
 
@@ -557,13 +564,15 @@ std::vector<TGraphAsymmErrors> GlobalLikelihood::getDataGraphs(const ROOT::Fit::
                                                     {chi1XSecModel, psi2SXSecModel},
                                                     {chi1PolModel, psiPolModel}, {id, lambdaPsiToChi1},
                                                     {1.0, B_PSIP_CHIC1[0] / br_psip_c1},
-                                                    L_ATLAS * br_c1_jpsi * br_jpsi_mm, M_JPSI);
+                                                    L_ATLAS * br_c1_jpsi * br_jpsi_mm, M_JPSI,
+                                                    m_clipCorrectionsPhysicalRange, {-1./3., 1.0});
 
   const auto chi2Corrections = getCorrectionFactors(m_chic_ratio_CMS_cs,
                                                     {chi2XSecModel, psi2SXSecModel},
                                                     {chi2PolModel, psiPolModel}, {id, lambdaPsiToChi2},
                                                     {1.0, B_PSIP_CHIC2[0] / br_psip_c2},
-                                                    L_ATLAS * br_c2_jpsi * br_jpsi_mm, M_JPSI);
+                                                    L_ATLAS * br_c2_jpsi * br_jpsi_mm, M_JPSI,
+                                                    m_clipCorrectionsPhysicalRange, {-0.6, 1.0});
 
   std::vector<double> ratioCorrections;
   for (size_t i = 0; i < chi1Corrections.size(); ++i) {

@@ -22,7 +22,7 @@ int main(int argc, char* argv[])
   const auto fhigh2 = parser.getOptionVal<double>("--fhigh2", 1);
   const auto randomScan = parser.getOptionVal<bool>("--randomScan", false);
   const auto usePsiPolarizations = parser.getOptionVal<bool>("--usePsiPolarizations", true);
-
+  const auto useUnphysicalCorrections = parser.getOptionVal<bool>("--useUnphysicalCorrections", false);
 
 
   ScanArguments scanArgs;
@@ -46,8 +46,8 @@ int main(int argc, char* argv[])
     scanArgs.nScan2 = 0;
   }
 
-
-  global_fit(outfile, graphfile, datadir, scanArgs, useCosthRatios, !nographs, usePsiPolarizations);
+  global_fit(outfile, graphfile, datadir, scanArgs, useCosthRatios, !nographs, usePsiPolarizations,
+             !useUnphysicalCorrections);
   return 0;
 }
 #endif

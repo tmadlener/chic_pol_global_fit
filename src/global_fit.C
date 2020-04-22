@@ -64,7 +64,7 @@ std::vector<PtCosthRatioMeasurement> read_costh_ratios(const std::string& config
   return data;
 }
 
-GlobalLikelihood get_likelihood(bool useCosthRatios, bool usePsiPol=true,
+GlobalLikelihood get_likelihood(bool useCosthRatios, bool usePsiPol=true, bool clipCorrs=false,
                                 const std::string& datadir="./data/") {
   // cross section data
   const auto psi2S_ATLAS_cs = readData<CrossSectionData>(datadir + "/ATLAS_psi2S_cross_section.dat");
@@ -80,14 +80,14 @@ GlobalLikelihood get_likelihood(bool useCosthRatios, bool usePsiPol=true,
 
   if (!useCosthRatios) {
     return GlobalLikelihood(psi2S_ATLAS_cs, psi2S_CMS_cs, chic2_ATLAS_cs, chic1_ATLAS_cs,
-                            jpsi_CMS_cs, chic_ratio_CMS_cs, psi2S_CMS_pol, jpsi_CMS_pol);
+                            jpsi_CMS_cs, chic_ratio_CMS_cs, psi2S_CMS_pol, jpsi_CMS_pol, clipCorrs);
   }
 
   const auto chic_ratios_CMS_pol = read_costh_ratios("chic_ratios.conf", datadir);
 
   return GlobalLikelihood(psi2S_ATLAS_cs, psi2S_CMS_cs, chic2_ATLAS_cs, chic1_ATLAS_cs,
                           jpsi_CMS_cs, chic_ratio_CMS_cs, psi2S_CMS_pol, jpsi_CMS_pol,
-                          chic_ratios_CMS_pol, usePsiPol);
+                          chic_ratios_CMS_pol, usePsiPol, clipCorrs);
 }
 
 
@@ -116,9 +116,10 @@ void global_fit(const std::string& scanFileName="results/scan_file.root",
                 const std::string& graphFileName="results/fit_result_graphs.root",
                 const std::string& dataDir="./data/",
                 const ScanArguments& scanArgs=ScanArguments{},
-                const bool useCosthRatios=true, const bool storeGraphs=true, bool usePsiPol=true)
+                const bool useCosthRatios=true, const bool storeGraphs=true, bool usePsiPol=true,
+                const bool clipCorrections=false)
 {
-  GlobalLikelihood likelihood = get_likelihood(useCosthRatios, usePsiPol, dataDir);
+  const GlobalLikelihood likelihood = get_likelihood(useCosthRatios, usePsiPol, clipCorrections, dataDir);
 
   LikelihoodFitter fitter;
 

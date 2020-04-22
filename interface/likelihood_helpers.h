@@ -73,12 +73,24 @@ double lambdaTheta(double ptm, double fLong, double betaLong, double betaTrans, 
   return lambdath(contLong / (contLong + contTrans));
 }
 
+
+/**
+ * clip the passed value into the passed range
+ */
+double clipRange(const std::pair<double, double>& range, const double val)
+{
+  return val < range.first ? range.first : (val > range.second ? range.second : val);
+}
+
 /**
  * Calculate the polarization dependent correction for the measured cross section
  */
-double acceptanceCorrection(const double kFactor, const double lambda)
+double acceptanceCorrection(const double kFactor, const double lambda,
+                            const bool clip=false, const std::pair<double, double>& range={0, 0})
 {
-  return (1 + 1. / 3. * kFactor) / (1 + (1 - lambda) / (3 + lambda) * kFactor);
+  const double lam = clip ? clipRange(range, lambda) : lambda;
+
+  return (1 + 1. / 3. * kFactor) / (1 + (1 - lam) / (3 + lam) * kFactor);
 }
 
 /**
@@ -182,7 +194,9 @@ double loglikeCrossSection(const CrossSectionMeasurement& data,
                            const std::vector<PolFeedDownTrafo>& feedDownTrafos,
                            const std::vector<double>& brFracs,
                            const double globNuiss,
-                           const double mass)
+                           const double mass,
+                           const bool clipCorrections=false,
+                           const std::pair<double, double>& lambdaRange={-1.0, 1.0})
 {
   double loglike = 0;
   for (const auto& point : data) {
@@ -190,7 +204,7 @@ double loglikeCrossSection(const CrossSectionMeasurement& data,
     std::tie(cs, lambda) = crossSecAndLambda(point, 0.5 / mass,
                                              csModels, polModels, feedDownTrafos, brFracs);
 
-    const double accCorr = acceptanceCorrection(point.K, lambda);
+    const double accCorr = acceptanceCorrection(point.K, lambda, clipCorrections, lambdaRange);
     const double crossSec = point.xSec * accCorr * globNuiss;
     const double uncer = point.uncer * accCorr * globNuiss;
 
@@ -214,7 +228,10 @@ double loglikeCrossSectionRatio(const CrossSectionMeasurement& data,
                                 const std::vector<PolFeedDownTrafo>& fdTrafosD,
                                 const std::vector<double>& brFracsN,
                                 const std::vector<double>& brFracsD,
-                                const double globNuiss, const double mass)
+                                const double globNuiss, const double mass,
+                                const bool clipCorrections=false,
+                                const std::pair<double, double>& lambdaRangeN={-0.6, 1.0},
+                                const std::pair<double, double>& lambdaRangeD={-1./3., 1.0})
 {
   double loglike = 0;
   for (const auto& point : data) {
@@ -224,7 +241,7 @@ double loglikeCrossSectionRatio(const CrossSectionMeasurement& data,
     std::tie(csD, lambdaD) = crossSecAndLambda(point, 0.5 / mass,
                                                csModelsD, polModelsD, fdTrafosD, brFracsD);
 
-    const double accCorr = acceptanceCorrection(point.K, lambdaN) / acceptanceCorrection(point.K, lambdaD);
+    const double accCorr = acceptanceCorrection(point.K, lambdaN, clipCorrections, lambdaRangeN) / acceptanceCorrection(point.K, lambdaD, clipCorrections, lambdaRangeD);
     const double crossSecRatio = point.xSec * accCorr * globNuiss;
     const double uncer = point.uncer * accCorr * globNuiss;
 
@@ -317,7 +334,9 @@ const std::vector<double> getCorrectionFactors(const CrossSectionMeasurement& da
                                                const std::vector<PolFeedDownTrafo>& fdTrafos,
                                                const std::vector<double> brFracs,
                                                const double globNuiss,
-                                               const double mass)
+                                               const double mass,
+                                               const bool clipCorrs=false,
+                                               const std::pair<double, double>& lambdaRange={-1.0, 1.0})
 {
   std::vector<double> corrections;
   for (const auto& point : data) {
@@ -325,7 +344,7 @@ const std::vector<double> getCorrectionFactors(const CrossSectionMeasurement& da
     std::tie(std::ignore, lambda) = crossSecAndLambda(point, 0.5 / mass,
                                                       csModels, polModels, fdTrafos, brFracs);
 
-    corrections.push_back(acceptanceCorrection(point.K, lambda) * globNuiss);
+    corrections.push_back(acceptanceCorrection(point.K, lambda, clipCorrs, lambdaRange) * globNuiss);
   }
 
   return corrections;
@@ -357,10 +376,11 @@ TGraphAsymmErrors correctedCSGraph(const CrossSectionMeasurement& data,
                                    const std::vector<double> brFracs,
                                    const double globNuiss,
                                    const double mass,
-                                   const char* name)
-{
+                                   const char* name,
+                                   const bool clipCorrs=false,
+                                   const std::pair<double, double>& lambdaRange={-1.0, 1.0}){
   const auto corrections = getCorrectionFactors(data, csModels, polModels, fdTrafos,
-                                                brFracs, globNuiss, mass);
+                                                brFracs, globNuiss, mass, clipCorrs, lambdaRange);
 
   return correctGraph(data, name, corrections);
 }
