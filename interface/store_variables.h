@@ -35,6 +35,7 @@ struct StoreVariables {
   double lth_jpsi_chic;
 
   double dlth_jpsi_psip;
+  double dlth_chic2_chic1;
 
   double r_psip_chic2;
   double r_psip_chic1;
@@ -42,6 +43,8 @@ struct StoreVariables {
   double r_chic1_jpsi;
   double r_psip_jpsi;
   double r_chic_jpsi;
+
+  double chic2_chic1_cs;
 
   std::array<double, mapSize(PARAMETERS)> pVals{};
 };
@@ -76,6 +79,8 @@ TTree* StoreVariables::create(bool storeParams)
   tree->Branch("r_psip_jpsi", &r_psip_jpsi);
   tree->Branch("r_chic_jpsi", &r_chic_jpsi);
 
+  tree->Branch("chic2_chic1_cs", &chic2_chic1_cs);
+  tree->Branch("dlth_chic2_chic1", &dlth_chic2_chic1);
 
   if (storeParams) {
     for (size_t iPar = 0; iPar < pVals.size(); ++iPar) {
@@ -138,6 +143,10 @@ bool StoreVariables::operator()(const double ptm, const std::vector<double>& p)
                                                       B_PSIP_JPSI[0] / br_psip_jpsi,
                                                       B_PSIP_CHIC1[0] * B_CHIC1_JPSI[0] / br_c1_jpsi / br_psip_c1,
                                                       B_PSIP_CHIC2[0] * B_CHIC2_JPSI[0] / br_c2_jpsi / br_psip_c2});
+
+  // cross section ratio and delta lambda for the chic
+  chic2_chic1_cs = chic2_cs / chic1_cs;
+  dlth_chic2_chic1 = lth_chic2 - lth_chic1;
 
 
   // feed-down fractions
