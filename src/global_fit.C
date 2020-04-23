@@ -117,9 +117,19 @@ void global_fit(const std::string& scanFileName="results/scan_file.root",
                 const std::string& dataDir="./data/",
                 const ScanArguments& scanArgs=ScanArguments{},
                 const bool useCosthRatios=true, const bool storeGraphs=true, bool usePsiPol=true,
-                const bool clipCorrections=false)
+                const bool clipCorrections=false, const bool fixLambasBestFit=false)
 {
-  const GlobalLikelihood likelihood = get_likelihood(useCosthRatios, usePsiPol, clipCorrections, dataDir);
+  auto likelihood = get_likelihood(useCosthRatios, usePsiPol, clipCorrections, dataDir);
+
+  if (fixLambasBestFit) {
+    LikelihoodFitter fitter;
+    std::cout << "Fitting likelihood to obtain best fit values for the longitudinal fractions of chic1 and chic2\n";
+    fitter.Fit(likelihood);
+
+    const auto& bfPars = fitter.Result().Parameters();
+    likelihood.fixParameter("f_long_c2", bfPars[likelihood.getParIdx("f_long_c2")]);
+    likelihood.fixParameter("f_long_c1", bfPars[likelihood.getParIdx("f_long_c1")]);
+  }
 
   LikelihoodFitter fitter;
 
@@ -168,5 +178,8 @@ void global_fit(const std::string& scanFileName="results/scan_file.root",
 
     graphFile->Close();
   }
+
+
+
 
 }

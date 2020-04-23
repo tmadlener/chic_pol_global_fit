@@ -25,11 +25,24 @@ public:
     Eigen::MatrixXd covMatrix = Eigen::Map<Eigen::MatrixXd>(cov.data(), means.size(), means.size());
 
     Eigen::SelfAdjointEigenSolver<Eigen::MatrixXd> solver(covMatrix);
-    if ((solver.eigenvalues().array() < 0).any()) {
-      std::cerr << "WARNING: covariance matrix is not positive definite!\n";
-    }
-    m_transform = solver.eigenvectors() * solver.eigenvalues().cwiseSqrt().asDiagonal();
+    auto eigenvals = solver.eigenvalues();
+    if ((eigenvals.array() < 0).any()) {
+      std::cerr << "INFO: The covariance matrix has negative eigenvalues.\n"
+                << "Checking if this could just be due to numerical reasons\n";
 
+      for (int i = 0; i < eigenvals.rows(); ++i) {
+        if (std::abs(eigenvals[i]) < 1e-8) {
+          eigenvals[i] = 0;
+        }
+      }
+
+      if ((eigenvals.array() < 0).any()) {
+        std::cerr << "WARNING: There are negative eigenvalues with absolute values > 1e-8.\n"
+                  << "The covariance matrix is not positive definite!\n";
+      }
+
+    }
+    m_transform = solver.eigenvectors() * eigenvals.cwiseSqrt().asDiagonal();
 
     // properly seed the mt19937 (see: https://codereview.stackexchange.com/a/109266)
     std::array<unsigned, RNG::state_size * RNG::word_size> random_data;
