@@ -2,16 +2,20 @@
 """
 Script that plots all data to best fit model comparisons
 """
+import numpy as np
 
 import ROOT as r
 r.PyConfig.IgnoreCommandLineOptions = True
 r.gROOT.SetBatch()
 
-from utils.plot_helpers import mkplot, setup_legend
+from utils.plot_helpers import mkplot, setup_legend, default_colors
 from utils.misc_helpers import cond_mkdir
 from utils.setup_plot_style import set_basic_style
 from utils.data_handling import list_obj
+from utils.graph_utils import scale_graph
 
+
+COL = default_colors()
 
 DATA_ATTR = [{'color': 1, 'marker': 20, 'size': 0.75},
              {'color': 1, 'marker': 25, 'size': 0.75}]
@@ -22,6 +26,9 @@ POL_LABEL = '#lambda_{#vartheta}'
 PTM_LABEL = 'p_{T}/M'
 CTH_LABEL = '|cos#vartheta^{HX}|'
 POL_RANGE = [0, 1]
+
+B_CHIC2_JPSI = 19.0e-2
+B_CHIC1_JPSI = 34.3e-2
 
 def psi2S_cs(gfile):
     """psi(2S) cross section plot"""
@@ -69,11 +76,14 @@ def chic_cs(gfile):
 def chic_ratio_cs(gfile):
     """chic cross section ratio plot"""
     leg = setup_legend(0.6, 0.7, 0.88, 0.78)
-    can = mkplot(gfile.Get('chic_ratio_CMS_cs'), drawOpt='PE', attr=DATA_ATTR,
-                 leg=leg, legEntries=['#chi_{c2} / #chi_{c1} CMS'],
+    can = mkplot(scale_graph(gfile.Get('chic_ratio_CMS_cs'), B_CHIC2_JPSI / B_CHIC1_JPSI),
+                 drawOpt='PE', attr=DATA_ATTR,
+                 leg=leg, legEntries=['B #chi_{c2} / B #chi_{c1} CMS'],
+                 yRange=[0, 1],
                  xRange=[2, 10], xLabel=PTM_LABEL, yLabel='ratio')
 
-    mkplot(gfile.Get('chic_ratio_cs_full'), can=can, drawOpt='Lsame',
+    mkplot(scale_graph(r.TGraph(gfile.Get('chic_ratio_cs_full')), B_CHIC2_JPSI / B_CHIC1_JPSI),
+           can=can, drawOpt='Lsame',
            leg=leg, legEntries=['model'], legOpt='L')
 
     return can
@@ -120,6 +130,34 @@ def costh_ratios(gfile):
     return cans
 
 
+def combined_cs(gfile):
+    """Figure combining all cross sections into one figure"""
+    MSIZE = 0.75
+    graph_attrs = {
+        'jpsi_CMS_cs': {'color': COL[0], 'marker': 24, 'size': MSIZE},
+        'psi2S_CMS_cs': {'color': COL[0], 'marker': 25, 'size': MSIZE},
+        'psi2S_ATLAS_cs': {'color': COL[1], 'marker': 25, 'size': MSIZE},
+        'chic1_ATLAS_cs': {'color': COL[1], 'marker': 22, 'size': MSIZE},
+        'chic2_ATLAS_cs': {'color': COL[1], 'marker': 23, 'size': MSIZE}
+    }
+
+    can = mkplot([gfile.Get(g) for g in graph_attrs.keys()], attr=graph_attrs.values(),
+                 drawOpt='PE', xRange=[2, 50], yRange=[1e-5, 30], logy=True, logx=True,
+                 xLabel=PTM_LABEL, yLabel=CS_LABEL)
+
+    mkplot([gfile.Get(f) for f in  ['psi_cs_direct', 'jpsi_cs_full', 'chic1_cs_full', 'chic2_cs_full']],
+           can=can, drawOpt='L same', attr=[{'color': 1, 'width': 1, 'line': 1}])
+
+
+    leg_graphs = [r.TGraph(1, np.array([10000]), np.array([10000])) for _ in range(4)]
+    mkplot(leg_graphs, can=can, drawOpt='P same', legPos=(0.2, 0.2, 0.4, 0.36),
+           legEntries=['J/#psi', '#psi(2S)', '#chi_{c1}', '#chi_{c2}'], legOpt='P',
+           attr=[graph_attrs[n] for n in ['jpsi_CMS_cs', 'psi2S_CMS_cs',
+                                          'chic1_ATLAS_cs', 'chic2_ATLAS_cs']])
+
+    return can
+
+
 def main(args):
     """Main"""
     set_basic_style()
@@ -128,12 +166,13 @@ def main(args):
 
     cond_mkdir(args.outdir)
 
-    for pfunc in [psi2S_cs, jpsi_cs, chic_cs, chic_ratio_cs, psi_pol]:
+    for pfunc in [psi2S_cs, jpsi_cs, chic_cs, chic_ratio_cs, psi_pol, combined_cs]:
         can = pfunc(gfile)
         can.SaveAs('/'.join([args.outdir, pfunc.__name__ + '.pdf']))
 
     for ptm, can in costh_ratios(gfile):
         can.SaveAs('/'.join([args.outdir, 'costh_ratio_ptm_{}.pdf'.format(ptm)]))
+
 
 
 
@@ -147,4 +186,3 @@ if __name__ == '__main__':
 
     clargs = parser.parse_args()
     main(clargs)
-
