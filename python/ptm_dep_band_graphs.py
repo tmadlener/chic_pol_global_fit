@@ -16,12 +16,16 @@ import logging
 logging.basicConfig(level=logging.INFO,
                     format='%(levelname)s - %(funcName)s: %(message)s')
 
-from utils.data_handling import get_dataframe
+from utils.data_handling import get_dataframe, apply_selections
 from utils.misc_helpers import quantile
+from utils.selection_functions import select_bin
 
 from common_helpers import (
     get_var_name, get_variable_binning, frac_to_lam, identity
 )
+
+CHIC2_POL_SEL = select_bin('lth_chic2', -0.6, 1.0)
+CHIC1_POL_SEL = select_bin('lth_chic1', -1./3., 1.0)
 
 
 def process_input_variables(var_str):
@@ -75,6 +79,12 @@ def main(args):
     """Main"""
     data = get_dataframe(args.scanfile)
 
+    if args.physical_lambdas:
+        logging.info('Removing rows with unphysical chic1 and chic2 lambdas')
+        n_pre = data.shape[0]
+        data = apply_selections(data, (CHIC1_POL_SEL, CHIC2_POL_SEL))
+        logging.info('Rows before: {}, rows afterwards: {}'.format(n_pre, data.shape[0]))
+
     # Get a "helper" ptm binning, that is only used in the groupby to easily
     # identify the different ptM values
     ptm_binning, ptm_vals = get_variable_binning(data.ptM, get_vals=True)
@@ -108,6 +118,10 @@ if __name__ == '__main__':
                         'the variable with a colon: TRANSFORMATION:VARIABLE',
                         default='frac_to_lam:f_long_c1,frac_to_lam:f_long_c2',
                         type=process_input_variables)
+    parser.add_argument('-pl', '--physical-lambdas', help='Clip the lambdas of '
+                        'the chic1 and chic2 to their physically allowed ranges '
+                        'before obtaining the bands', action='store_true',
+                        default=False)
 
     clargs = parser.parse_args()
     main(clargs)
