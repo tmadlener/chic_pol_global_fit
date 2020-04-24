@@ -70,7 +70,10 @@ def main(args):
 
     for scan_job in scan_commands:
         full_com = base_command + scan_job
-        subprocess.call(full_com)
+        if args.dryrun:
+            print('_'.join(full_com))
+        else:
+            subprocess.call(full_com)
 
 
 
@@ -101,6 +104,9 @@ if __name__ == '__main__':
                         ' points', type=float, default=0.01)
     parser.add_argument('-n', '--n-jobs', help='Number of batch jobs to create',
                         type=int, default=50)
+    parser.add_argument('--dryrun', help='Only print the commands that would be '
+                        'launched instead of actually launching them',
+                        action='store_true', default=False)
 
 
     clargs = parser.parse_args()
