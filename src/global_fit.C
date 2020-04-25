@@ -112,6 +112,32 @@ constexpr std::array<const char*, 25> lambdaContNuissPars = {
   "norm_costh_1", "norm_costh_2", "norm_costh_3"};
 
 
+void printResult(const LikelihoodFitter& fitter, const GlobalLikelihood& llh)
+{
+  const double minChi2 = 2 * fitter.Result().MinFcnValue();
+  const int nData = llh.nDataPoints();
+  const int nPars = llh.nPars();
+  const int nNuiss = llh.nNuissParams();
+  // since in the likelihood the nuissance parameters are counted towards the
+  // total number of parameters, they have to be added to the data points to
+  // arrive at a 0 contribution for each nuissance parameter
+  const int ndf = nData + nNuiss - nPars;
+
+  std::ios_base::fmtflags fmtflags(std::cout.flags());
+
+  std::cout << "========================= Fit Results =========================\n"
+            << "Number of fitted data points: " << nData << "\n"
+            << "Total number of parameters: " << nPars << "\n"
+            << "Number of nuissance parameters: " << nNuiss << "\n"
+            << "Minimum chi2: " << minChi2 << "\n"
+            << " -> chi2 / ndf " << std::setprecision(4) << minChi2 << " / " << ndf
+            << " (p = " << TMath::Prob(minChi2, ndf) << ")\n"
+            << "===============================================================\n";
+
+  std::cout.flags(fmtflags);
+}
+
+
 void global_fit(const std::string& scanFileName="results/scan_file.root",
                 const std::string& graphFileName="results/fit_result_graphs.root",
                 const std::string& dataDir="./data/",
@@ -134,6 +160,7 @@ void global_fit(const std::string& scanFileName="results/scan_file.root",
   LikelihoodFitter fitter;
 
   fitter.Fit(likelihood);
+  printResult(fitter, likelihood);
 
   TFile* scanFile = new TFile(scanFileName.c_str(), "recreate");
 

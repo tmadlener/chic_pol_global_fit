@@ -65,6 +65,16 @@ public:
   static int getParIdx(const std::string& name) { return IPAR(name.c_str()); }
 
   /**
+   * Get the number of data points
+   */
+  size_t nDataPoints() const;
+
+  /**
+   * Get the number of nuissance parameters
+   */
+  size_t nNuissParams() const { return m_nuissParams.size(); }
+
+  /**
    * Get the start parameter settings (necessary to pass them to the fitter)
    */
   ParamsSettings getStartParams() const { return m_startParams; }
@@ -240,6 +250,27 @@ PolModel GlobalLikelihood::getChi2PolModel(const double* p)
   return [f_long_c2, beta_long_c2, beta_trans_c2, gamma] (double ptm) {
     return lambdaTheta(ptm, f_long_c2, beta_long_c2, beta_trans_c2, gamma);
   };
+}
+
+size_t GlobalLikelihood::nDataPoints() const
+{
+  size_t nData = 0;
+
+  nData += m_psi2S_ATLAS_cs.size();
+  nData += m_psi2S_CMS_cs.size();
+  nData += m_chic2_ATLAS_cs.size();
+  nData += m_chic1_ATLAS_cs.size();
+  nData += m_jpsi_CMS_cs.size();
+  nData += m_chic_ratio_CMS_cs.size();
+
+  nData += m_psi2S_CMS_pol.size();
+  nData += m_jpsi_CMS_pol.size();
+
+  for (const auto& chiRatio : m_chic_ratios_CMS_pol) {
+    nData += chiRatio.second.size();
+  }
+
+  return nData;
 }
 
 
