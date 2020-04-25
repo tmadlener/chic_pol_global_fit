@@ -4,7 +4,7 @@
 #include "data_structures.h"
 #include "constants.h"
 #include "likelihood_helpers.h"
-#include "simple_compile_time_map.h"
+#include "fit_parameters.h"
 
 #include "Fit/ParameterSettings.h"
 #include "Fit/FitResult.h"
@@ -16,49 +16,6 @@
 #include <utility>
 #include <string>
 #include <sstream>
-
-constexpr std::array<ParameterIndex, 27> PARAMETERS = {{
-    {"sigma_psip",  0},
-    {"sigma_chic2", 1},
-    {"sigma_chic1", 2},
-    {"sigma_jpsi", 3},
-
-    {"f_long_psi", 4},
-    {"f_long_c1", 5},
-    {"f_long_c2", 6},
-
-    {"gamma", 7},
-    {"beta_long_psi", 8},
-    {"beta_trans_psi", 9},
-    {"beta_long_c1", 10},
-    {"beta_trans_c1", 11},
-    {"beta_long_c2", 12},
-    {"beta_trans_c2", 13},
-
-    {"br_psip_dp", 14},
-    {"br_psip_mm", 15},
-    {"br_psip_c2", 16},
-    {"br_psip_c1", 17},
-    {"br_psip_jpsi", 18},
-    {"br_c2_jpsi", 19},
-    {"br_c1_jpsi", 20},
-    {"br_jpsi_mm", 21},
-
-    {"L_CMS", 22},
-    {"L_ATLAS", 23},
-
-    {"norm_costh_1", 24},
-    {"norm_costh_2", 25},
-    {"norm_costh_3", 26},
-  }};
-
-/**
- * Convenience overload
- */
-static constexpr int IPAR(const char* name)
-{
-  return getParIdx(PARAMETERS, name);
-}
 
 
 class GlobalLikelihood {
@@ -91,7 +48,7 @@ public:
     // correctly resized, and the initialization of the normalizations can be
     // omitted.
     m_useCosthRatios = false;
-    m_startParams.resize(mapSize(PARAMETERS) - 3);
+    m_startParams.resize(NPARS() - 3);
     setupFit();
   }
 
@@ -191,7 +148,7 @@ private:
   bool m_usePsiPolarizations{true};
   bool m_clipCorrectionsPhysicalRange{false};
 
-  ParamsSettings m_startParams{mapSize(PARAMETERS)}; // default initialize
+  ParamsSettings m_startParams{NPARS()}; // default initialize
   std::vector<std::pair<int, NuissanceParameter>> m_nuissParams;
 };
 
@@ -459,11 +416,13 @@ void GlobalLikelihood::defineStartParams()
 
   setParam("gamma", 0.713, 0.1);
   setParam("beta_long_psi", 3.5, 0.1);
+#if USE_SAME_BETAS == 0
   setParam("beta_trans_psi", 3.3, 0.1);
   setParam("beta_long_c1", 3.0, 0.1);
   setParam("beta_trans_c1", 3.45, 0.1);
   setParam("beta_long_c2", 3.3, 0.1);
   setParam("beta_trans_c2", 3.7, 0.1);
+#endif
 
   setParam("br_psip_dp", 1, 0.01);
   setParam("br_psip_mm", 1, 0.01);

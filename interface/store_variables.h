@@ -3,6 +3,7 @@
 
 #include "likelihood.h"
 #include "likelihood_helpers.h"
+#include "fit_parameters.h"
 
 #include "TTree.h"
 
@@ -46,7 +47,7 @@ struct StoreVariables {
 
   double chic2_chic1_cs;
 
-  std::array<double, mapSize(PARAMETERS)> pVals{};
+  std::array<double, NPARS()> pVals{};
 };
 
 TTree* StoreVariables::create(bool storeParams)
@@ -84,7 +85,8 @@ TTree* StoreVariables::create(bool storeParams)
 
   if (storeParams) {
     for (size_t iPar = 0; iPar < pVals.size(); ++iPar) {
-      tree->Branch(PARAMETERS[iPar].first, &pVals[iPar]);
+      std::cout << PARNAME(iPar) << " " << iPar << "\n";
+      tree->Branch(PARNAME(iPar), &pVals[iPar]);
     }
   }
 

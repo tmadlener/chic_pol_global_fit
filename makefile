@@ -5,6 +5,8 @@ CXX=g++
 
 INCS=-I$(shell root-config --incdir) -I./interface -I$(CHIB_CHIC_POLFW_DIR)/general/interface -I$(EIGEN_INCLUDE_DIR)
 
+ADD_FLAGS=
+
 BIN=./bin/
 SRC=./src/
 RESULTS=./results/
@@ -20,13 +22,13 @@ all: setup $(LIST)
 
 debug: CXXFLAGS+=-ggdb3 -O0
 debug: CXXFLAGS:=$(filter-out -O3,$(CXXFLAGS))
-debug: setup $(LIST)
+debug: all
 
 setup:
 	mkdir -p $(BIN) ${RESULTS}
 
 $(BIN)%: $(SRC)%.cc
-	$(CXX) $(INCS) $(CXXFLAGS) -MMD -MP $< -o $@ $(ROOTLIBS)
+	$(CXX) $(INCS) $(CXXFLAGS) -MMD -MP $< -o $@ $(ROOTLIBS) $(ADD_FLAGS)
 
 clean:
 	rm -rf $(BIN)
