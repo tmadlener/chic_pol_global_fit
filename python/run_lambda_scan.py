@@ -71,7 +71,7 @@ def main(args):
     for scan_job in scan_commands:
         full_com = base_command + scan_job
         if args.dryrun:
-            print('_'.join(full_com))
+            print(' '.join(full_com))
         else:
             subprocess.call(full_com)
 
