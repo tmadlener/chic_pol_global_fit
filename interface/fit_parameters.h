@@ -6,9 +6,8 @@
 // make it possible to switch the parametrization of the cross section
 // functions:
 // 0 - Usual fit with 6 independent betas. The fit with the most freedom.
-// 1 - Fit with only 1 beta. This implies constant polarizations and feed-down
-// fractions
-// 2 - Fit with same total betas for all states, but different longitudinal betas
+// 1 - Fit with same total beta, but individual longitudinal betas.
+// 2 - Fit with only one beta for all states
 
 #ifndef FIT_OPTION
 #define FIT_OPTION 0
@@ -52,7 +51,7 @@ constexpr std::array<ParameterIndex, 27> PARAMETERS = {{
     {"norm_costh_1", 24},
     {"norm_costh_2", 25},
     {"norm_costh_3", 26},
-#elif FIT_OPTION == 1
+#elif FIT_OPTION == 2
     {"beta_long_psi", 8},
     {"beta_long_c1", 8},
     {"beta_total_c1", 8},
@@ -74,7 +73,7 @@ constexpr std::array<ParameterIndex, 27> PARAMETERS = {{
     {"norm_costh_1", 19},
     {"norm_costh_2", 20},
     {"norm_costh_3", 21},
-#else // now only 2 is still available
+#else // now only 1 is still available
     {"beta_long_psi", 9},
     {"beta_long_c1", 10},
     {"beta_total_c1", 8},
