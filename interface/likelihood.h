@@ -167,88 +167,80 @@ private:
 CSModel GlobalLikelihood::getPsi2SXSecModel(const double* p)
 {
   const double sigma_psip = p[IPAR("sigma_psip")];
-  const double f_long_psi = p[IPAR("f_long_psi")];
-  const double beta_trans_psi = p[IPAR("beta_trans_psi")];
-  const double beta_long_psi = p[IPAR("beta_long_psi")];
+  const double beta_total_psi = p[IPAR("beta_total_psi")];
   const double gamma = p[IPAR("gamma")];
 
-  return  [sigma_psip, f_long_psi, beta_trans_psi, beta_long_psi, gamma] (double ptm) {
-    return sig_dir(ptm, sigma_psip, f_long_psi, beta_trans_psi, beta_long_psi, gamma);
+  return  [sigma_psip, beta_total_psi, gamma] (double ptm) {
+    return sig_dir(ptm, sigma_psip, beta_total_psi, gamma);
   };
 }
 
 CSModel GlobalLikelihood::getChi1XSecModel(const double* p)
 {
   const double sigma_chic1 = p[IPAR("sigma_chic1")];
-  const double beta_long_c1 = p[IPAR("beta_long_c1")];
-  const double beta_trans_c1 = p[IPAR("beta_trans_c1")];
-  const double f_long_c1 = p[IPAR("f_long_c1")];
+  const double beta_total_c1 = p[IPAR("beta_total_c1")];
   const double gamma = p[IPAR("gamma")];
 
-  return [sigma_chic1, f_long_c1, beta_long_c1, beta_trans_c1, gamma] (double ptm) {
-    return sig_dir(ptm, sigma_chic1, f_long_c1, beta_long_c1, beta_trans_c1, gamma);
+  return [sigma_chic1, beta_total_c1, gamma] (double ptm) {
+    return sig_dir(ptm, sigma_chic1, beta_total_c1, gamma);
   };
 }
 
 CSModel GlobalLikelihood::getChi2XSecModel(const double* p)
 {
   const double sigma_chic2 = p[IPAR("sigma_chic2")];
-  const double beta_long_c2 = p[IPAR("beta_long_c2")];
-  const double beta_trans_c2 = p[IPAR("beta_trans_c2")];
-  const double f_long_c2 = p[IPAR("f_long_c2")];
+  const double beta_total_c2 = p[IPAR("beta_total_c2")];
   const double gamma = p[IPAR("gamma")];
 
-  return [sigma_chic2, f_long_c2, beta_long_c2, beta_trans_c2, gamma] (double ptm) {
-    return sig_dir(ptm, sigma_chic2, f_long_c2, beta_long_c2, beta_trans_c2, gamma);
+  return [sigma_chic2, beta_total_c2, gamma] (double ptm) {
+    return sig_dir(ptm, sigma_chic2, beta_total_c2, gamma);
   };
 }
 
 CSModel GlobalLikelihood::getJpsiXSecModel(const double* p)
 {
   const double sigma_jpsi = p[IPAR("sigma_jpsi")];
-  const double f_long_psi = p[IPAR("f_long_psi")];
-  const double beta_trans_psi = p[IPAR("beta_trans_psi")];
-  const double beta_long_psi = p[IPAR("beta_long_psi")];
+  const double beta_total_psi = p[IPAR("beta_total_psi")];
   const double gamma = p[IPAR("gamma")];
 
-  return [sigma_jpsi, f_long_psi, beta_trans_psi, beta_long_psi, gamma] (double ptm) {
-    return sig_dir(ptm, sigma_jpsi, f_long_psi, beta_trans_psi, beta_long_psi, gamma);
+  return [sigma_jpsi, beta_total_psi, gamma] (double ptm) {
+    return sig_dir(ptm, sigma_jpsi, beta_total_psi, gamma);
   };
 }
 
 PolModel GlobalLikelihood::getPsiPolModel(const double* p)
 {
   const double f_long_psi = p[IPAR("f_long_psi")];
-  const double beta_trans_psi = p[IPAR("beta_trans_psi")];
+  const double beta_total_psi = p[IPAR("beta_total_psi")];
   const double beta_long_psi = p[IPAR("beta_long_psi")];
   const double gamma = p[IPAR("gamma")];
 
-  return [f_long_psi, beta_trans_psi, beta_long_psi, gamma] (double ptm) {
-    return lambdaTheta(ptm, f_long_psi, beta_long_psi, beta_trans_psi, gamma);
+  return [f_long_psi, beta_total_psi, beta_long_psi, gamma] (double ptm) {
+    return lambdaTheta(ptm, f_long_psi, beta_long_psi, beta_total_psi, gamma);
   };
 }
 
 PolModel GlobalLikelihood::getChi1PolModel(const double* p)
 {
   const double beta_long_c1 = p[IPAR("beta_long_c1")];
-  const double beta_trans_c1 = p[IPAR("beta_trans_c1")];
+  const double beta_total_c1 = p[IPAR("beta_total_c1")];
   const double f_long_c1 = p[IPAR("f_long_c1")];
   const double gamma = p[IPAR("gamma")];
 
-  return [f_long_c1, beta_trans_c1, beta_long_c1, gamma] (double ptm) {
-    return lambdaTheta(ptm, f_long_c1, beta_long_c1, beta_trans_c1, gamma);
+  return [f_long_c1, beta_total_c1, beta_long_c1, gamma] (double ptm) {
+    return lambdaTheta(ptm, f_long_c1, beta_long_c1, beta_total_c1, gamma);
   };
 }
 
 PolModel GlobalLikelihood::getChi2PolModel(const double* p)
 {
   const double beta_long_c2 = p[IPAR("beta_long_c2")];
-  const double beta_trans_c2 = p[IPAR("beta_trans_c2")];
+  const double beta_total_c2 = p[IPAR("beta_total_c2")];
   const double f_long_c2 = p[IPAR("f_long_c2")];
   const double gamma = p[IPAR("gamma")];
 
-  return [f_long_c2, beta_long_c2, beta_trans_c2, gamma] (double ptm) {
-    return lambdaTheta(ptm, f_long_c2, beta_long_c2, beta_trans_c2, gamma);
+  return [f_long_c2, beta_long_c2, beta_total_c2, gamma] (double ptm) {
+    return lambdaTheta(ptm, f_long_c2, beta_long_c2, beta_total_c2, gamma);
   };
 }
 
@@ -447,11 +439,11 @@ void GlobalLikelihood::defineStartParams()
 
   setParam("gamma", 0.713, 0.1);
   setParam("beta_long_psi", 3.5, 0.1);
-  setParam("beta_trans_psi", 3.5, 0.1);
-  setParam("beta_long_c1", 3.0, 0.1);
-  setParam("beta_trans_c1", 3.45, 0.1);
+  setParam("beta_total_psi", 3.3, 0.1);
+  setParam("beta_long_c1", 3.5, 0.1);
+  setParam("beta_total_c1", 3.35, 0.1);
   setParam("beta_long_c2", 3.5, 0.1);
-  setParam("beta_trans_c2", 3.5, 0.1);
+  setParam("beta_total_c2", 3.35, 0.1);
 
   setParam("br_psip_dp", 1, 0.01);
   setParam("br_psip_mm", 1, 0.01);

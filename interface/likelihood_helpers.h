@@ -27,10 +27,9 @@ double norm_plaw(double x, double beta, double gamma, double xnorm=PTMNORM)
   return power_law(x, beta, gamma) / power_law(xnorm, beta, gamma);
 }
 
-double sig_dir(double ptm, double sig, double fLong, double betaLong, double betaTrans, double gamma)
+double sig_dir(double ptm, double sig, double beta, double gamma)
 {
-  return sig * ((1 - fLong) * norm_plaw(ptm, betaTrans, gamma) +
-                fLong * norm_plaw(ptm, betaLong, gamma));
+  return sig * norm_plaw(ptm, beta, gamma);
 }
 
 /**
@@ -62,15 +61,16 @@ double lambdath(const double fLong)
 }
 
 /**
- * ptm dependent lambda theta from the shape parameters of the two components and the longitudinal
- * fraction at a given reference point
+ * ptm dependent lambda theta from the shape parameters of the two total and
+ * longitudional cross sections and the longitudinal fraction at a given
+ * reference point
  */
-double lambdaTheta(double ptm, double fLong, double betaLong, double betaTrans, double gamma)
+double lambdaTheta(double ptm, double fLong, double betaLong, double betaTotal, double gamma)
 {
-  const double contLong = fLong * norm_plaw(ptm, betaLong, gamma);
-  const double contTrans = (1 - fLong) * norm_plaw(ptm, betaTrans, gamma);
+  const double total = norm_plaw(ptm, betaTotal, gamma);
+  const double longCont = fLong * norm_plaw(ptm, betaLong, gamma);
 
-  return lambdath(contLong / (contLong + contTrans));
+  return lambdath(longCont / total);
 }
 
 

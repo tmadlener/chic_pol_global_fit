@@ -8,9 +8,7 @@
 // 0 - Usual fit with 6 independent betas. The fit with the most freedom.
 // 1 - Fit with only 1 beta. This implies constant polarizations and feed-down
 // fractions
-// 2 - Fit with same betas for psi, one transverse beta and two independent
-// longitudinal betas for the chi. Implies constant psi polarization, but allows
-// for smooth changes of the chi polarizations and feed-downs
+// 2 - Fit with same total betas for all states, but different longitudinal betas
 
 #ifndef FIT_OPTION
 #define FIT_OPTION 0
@@ -31,13 +29,13 @@ constexpr std::array<ParameterIndex, 27> PARAMETERS = {{
     {"f_long_c2", 6},
 
     {"gamma", 7},
-    {"beta_long_psi", 8},
+    {"beta_total_psi", 8},
 #if FIT_OPTION == 0
-    {"beta_trans_psi", 9},
-    {"beta_long_c1", 10},
-    {"beta_trans_c1", 11},
-    {"beta_long_c2", 12},
-    {"beta_trans_c2", 13},
+    {"beta_long_psi", 9},
+    {"beta_total_c1", 10},
+    {"beta_long_c1", 11},
+    {"beta_total_c2", 12},
+    {"beta_long_c2", 13},
 
     {"br_psip_dp", 14},
     {"br_psip_mm", 15},
@@ -55,11 +53,11 @@ constexpr std::array<ParameterIndex, 27> PARAMETERS = {{
     {"norm_costh_2", 25},
     {"norm_costh_3", 26},
 #elif FIT_OPTION == 1
-    {"beta_trans_psi", 8},
+    {"beta_long_psi", 8},
     {"beta_long_c1", 8},
-    {"beta_trans_c1", 8},
+    {"beta_total_c1", 8},
     {"beta_long_c2", 8},
-    {"beta_trans_c2", 8},
+    {"beta_total_c2", 8},
 
     {"br_psip_dp", 9},
     {"br_psip_mm", 10},
@@ -77,11 +75,11 @@ constexpr std::array<ParameterIndex, 27> PARAMETERS = {{
     {"norm_costh_2", 20},
     {"norm_costh_3", 21},
 #else // now only 2 is still available
-    {"beta_trans_psi", 8},
-    {"beta_long_c1", 9},
-    {"beta_trans_c1", 10},
+    {"beta_long_psi", 9},
+    {"beta_long_c1", 10},
+    {"beta_total_c1", 8},
     {"beta_long_c2", 11},
-    {"beta_trans_c2", 10},
+    {"beta_total_c2", 8},
 
     {"br_psip_dp", 12},
     {"br_psip_mm", 13},
