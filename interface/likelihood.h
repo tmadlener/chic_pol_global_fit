@@ -447,13 +447,11 @@ void GlobalLikelihood::defineStartParams()
 
   setParam("gamma", 0.713, 0.1);
   setParam("beta_long_psi", 3.5, 0.1);
-#if USE_SAME_BETAS == 0
-  setParam("beta_trans_psi", 3.3, 0.1);
+  setParam("beta_trans_psi", 3.5, 0.1);
   setParam("beta_long_c1", 3.0, 0.1);
   setParam("beta_trans_c1", 3.45, 0.1);
-  setParam("beta_long_c2", 3.3, 0.1);
-  setParam("beta_trans_c2", 3.7, 0.1);
-#endif
+  setParam("beta_long_c2", 3.5, 0.1);
+  setParam("beta_trans_c2", 3.5, 0.1);
 
   setParam("br_psip_dp", 1, 0.01);
   setParam("br_psip_mm", 1, 0.01);
