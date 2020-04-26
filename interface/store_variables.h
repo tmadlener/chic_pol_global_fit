@@ -85,7 +85,6 @@ TTree* StoreVariables::create(bool storeParams)
 
   if (storeParams) {
     for (size_t iPar = 0; iPar < pVals.size(); ++iPar) {
-      std::cout << PARNAME(iPar) << " " << iPar << "\n";
       tree->Branch(PARNAME(iPar), &pVals[iPar]);
     }
   }
