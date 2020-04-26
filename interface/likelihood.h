@@ -173,7 +173,7 @@ CSModel GlobalLikelihood::getPsi2SXSecModel(const double* p)
   const double gamma = p[IPAR("gamma")];
 
   return  [sigma_psip, f_long_psi, beta_trans_psi, beta_long_psi, gamma] (double ptm) {
-    return sig_dir(ptm, sigma_psip, f_long_psi, beta_long_psi, beta_trans_psi, gamma);
+    return sig_dir(ptm, sigma_psip, f_long_psi, beta_trans_psi, beta_long_psi, gamma);
   };
 }
 
