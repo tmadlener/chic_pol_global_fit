@@ -16,6 +16,11 @@
 #include <cmath>
 #include <numeric>
 
+bool isGoodFit(int goodFit, const std::vector<double>& parValues) {
+  return (goodFit &&
+          std::none_of(parValues.cbegin(), parValues.cend(), [] (double d) { return std::isnan(d); }));
+}
+
 class LikelihoodFitter {
 public:
   LikelihoodFitter() {
@@ -150,6 +155,11 @@ void LikelihoodFitter::Scan(const LLH& llh, const ScanSettings& scanSettings, TT
   size_t count{};
   const size_t total = scanSettings.first.values.size() * scanSettings.second.values.size();
 
+  // keep a list of parameter settings that have been used successfully in a
+  // previous fit in case the fit from the "standard" starting point does not
+  // work converge
+  auto lastGoodParams = params;
+
   // For each parameter set, find the minimal chi2 value with fixed values. If
   // this value is above the chi2 level corresponding to a given CL, then no
   // configuration of the other parameters can exist, for which a smaller chi2
@@ -165,16 +175,59 @@ void LikelihoodFitter::Scan(const LLH& llh, const ScanSettings& scanSettings, TT
       params[parIdcs.second].Fix();
       params[parIdcs.second].SetValue(p2);
 
-      goodFit = 0;
 
+      goodFit = FitFromParams(llh, params);
       const auto& parResults = fitter.Result().Parameters();
-      if (FitFromParams(llh, params) &&
-          std::none_of(parResults.cbegin(), parResults.cend(), [] (double d) { return std::isnan(d); })) {
-        goodFit = 1;
+
+      if (isGoodFit(goodFit, parResults)) {
+        values.assign(parResults.cbegin(), parResults.cend());
+        llh_val = fitter.Result().MinFcnValue();
+
+        lastGoodParams = fitter.Config().ParamsSettings();
+      } else {
+        // two more options at our disposal to get a fit
+        // 1) retry from the last values that lead to a converging fit
+        lastGoodParams[parIdcs.first].Fix();
+        lastGoodParams[parIdcs.first].SetValue(p1);
+        lastGoodParams[parIdcs.second].Fix();
+        lastGoodParams[parIdcs.second].SetValue(p2);
+
+        std::cout << "Retrying fitting from last good parameter values\n";
+
+        goodFit = 2 * FitFromParams(llh, lastGoodParams); // indicate a refit in the variable
+        const auto& parResults2 = fitter.Result().Parameters();
+
+        if (isGoodFit(goodFit, parResults2)) {
+          values.assign(parResults2.cbegin(), parResults2.cend());
+          llh_val = fitter.Result().MinFcnValue();
+
+          lastGoodParams = fitter.Config().ParamsSettings();
+        } else {
+          // 2) start from the very starting parameters again
+          auto startParams = llh.getStartParams();
+          startParams[parIdcs.first].Fix();
+          startParams[parIdcs.first].SetValue(p1);
+          startParams[parIdcs.second].Fix();
+          startParams[parIdcs.second].SetValue(p2);
+
+          std::cout << "Retrying fitting from the starting parameter values\n";
+
+          goodFit = 3 * FitFromParams(llh, startParams);
+          const auto& parResults3 = fitter.Result().Parameters();
+
+          if (isGoodFit(goodFit, parResults3)) {
+            values.assign(parResults3.cbegin(), parResults3.cend());
+            llh_val = fitter.Result().MinFcnValue();
+          } else {
+            std::cout << "None of the three trials of fitting resulted in a converging fit for "
+                      << scanSettings.first.name << " = " << p1 << ", "
+                      << scanSettings.second.name << " = " << p2 << "\n";
+            goodFit = 0;
+            llh_val = llh(parResults3.data());
+          }
+        }
       }
 
-      values.assign(parResults.cbegin(), parResults.cend());
-      llh_val = fitter.Result().MinFcnValue();
       tree->Fill();
 
       count++;
