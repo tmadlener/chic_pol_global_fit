@@ -58,7 +58,7 @@ def load_data(scanfile, var_x, var_y, tree='log_like_scan'):
     if 'goodFit' in data.columns:
         # remove all rows where the fit did not converge and where there are
         # nan values for any of the fitted parameters
-        data = apply_selections(data, lambda d: d.goodFit == 1)
+        data = apply_selections(data, lambda d: d.goodFit > 0)
         n_bad_fit = n_full - data.shape[0]
 
         logging.info('Removed %d because of no good fit', n_bad_fit)

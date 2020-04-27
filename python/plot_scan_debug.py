@@ -56,7 +56,7 @@ def make_plot_good_fit(data, var_x, var_y, tf_x, tf_y):
     x_binning = get_variable_binning(x_vals)
     y_binning = get_variable_binning(y_vals)
 
-    good_fit = data.goodFit == 1
+    good_fit = data.goodFit > 0
 
     hist = hist2d(x_vals[good_fit], y_vals[good_fit],
                   x_hist_sett=(len(x_binning) - 1, x_binning),
@@ -87,7 +87,7 @@ def make_plot_min_chi2(data, var_x, var_y, tf_x, tf_y, gf_only=False):
     bin_data = bin_data.drop_duplicates()
 
     if gf_only:
-        bin_data = apply_selections(bin_data, lambda d: d.goodFit == 1)
+        bin_data = apply_selections(bin_data, lambda d: d.goodFit > 0)
 
     # Get the binning
     trans_f_x = globals()[tf_x]
