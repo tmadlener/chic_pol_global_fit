@@ -22,7 +22,7 @@ int main(int argc, char* argv[])
   const auto fhigh2 = parser.getOptionVal<double>("--fhigh2", 1);
   const auto randomScan = parser.getOptionVal<bool>("--randomScan", false);
   const auto usePsiPolarizations = parser.getOptionVal<bool>("--usePsiPolarizations", true);
-  const auto useUnphysicalCorrections = parser.getOptionVal<bool>("--useUnphysicalCorrections", false);
+  const auto usePhysicalCorrections = parser.getOptionVal<bool>("--usePhysicalCorrections", false);
   const auto fixLambdasChicBestFit = parser.getOptionVal<bool>("--fixLambdasChicBestFit", false);
 
 
@@ -49,7 +49,7 @@ int main(int argc, char* argv[])
   }
 
   global_fit(outfile, graphfile, datadir, scanArgs, useCosthRatios, !nographs, usePsiPolarizations,
-             !useUnphysicalCorrections, fixLambdasChicBestFit);
+             usePhysicalCorrections, fixLambdasChicBestFit);
   return 0;
 }
 #endif

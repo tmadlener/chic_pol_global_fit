@@ -10,7 +10,7 @@
 // 2 - Fit with only one beta for all states
 
 #ifndef FIT_OPTION
-#define FIT_OPTION 0
+#define FIT_OPTION 1
 #endif
 
 #if FIT_OPTION > 2
