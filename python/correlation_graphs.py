@@ -7,7 +7,7 @@ import ROOT as r
 r.PyConfig.IgnoreCommandLineOptions = True
 
 from utils.data_handling import get_dataframe
-from utils.misc_helpers import flatten
+from utils.misc_helpers import flatten, get_bin_cut_root, combine_cuts
 
 from common_helpers import get_2d_hist, get_coverage_contour
 
@@ -38,7 +38,15 @@ def make_pair_correlation(data, varx, vary):
 
 def main(args):
     """Main"""
-    data = get_dataframe(args.scanfile, columns=list(flatten(args.variables)))
+    condition=None
+    if args.physical_lambdas:
+        condition = combine_cuts(
+            (get_bin_cut_root('lth_chic2', -0.6, 1),
+             get_bin_cut_root('lth_chic1', -1./3., 1))
+        )
+
+    data = get_dataframe(args.scanfile, columns=list(flatten(args.variables)), where=condition)
+
 
     outfile = r.TFile.Open(args.outfile, 'recreate')
 
@@ -64,6 +72,11 @@ if __name__ == '__main__':
                         'graphs should be produced.',
                         default='r_chic1_jpsi|r_chic2_jpsi',
                         type=process_input_variables)
+    parser.add_argument('-pl', '--physical-lambdas', help='Clip the lambdas of '
+                        'the chic1 and chic2 to their physically allowed ranges '
+                        'before obtaining the bands', action='store_true',
+                        default=False)
+
 
     clargs = parser.parse_args()
     main(clargs)

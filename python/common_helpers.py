@@ -5,6 +5,7 @@ Module containing some common helper functionality
 import numpy as np
 from scipy.spatial import ConvexHull
 from collections import OrderedDict
+from functools import partial
 
 import ROOT as r
 
@@ -39,7 +40,7 @@ def secant(func, bracket, eps=1e-4, maxsteps=100, nsteps=0):
 try:
     from scipy.optimize import root_scalar
 except ImportError: # scipy not recent enough
-    root_scalar = secant
+    root_scalar = partial(secant, eps=1e-3)
 
 
 def frac_to_lam(frac):
@@ -125,7 +126,7 @@ def get_coverage_contour(hist, coverage=0.683):
     search_brack = [q_bin * 0.05 * np.max(vals), (q_bin + 1) * 0.05 * np.max(vals)]
 
     cov_level = root_scalar(lambda x: _coverage(x) - coverage,
-                            bracket=search_brack, eps=1e-3)
+                            bracket=search_brack)
 
     filled = vals >= cov_level.root
 
