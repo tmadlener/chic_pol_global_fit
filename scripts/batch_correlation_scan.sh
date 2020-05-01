@@ -18,4 +18,4 @@ exe="/afs/hephy.at/work/t/tmadlener/chic_pol_global_fit/bin/run_pTM_scan"
 
 outdir=$(dirname ${scanfile})
 
-run_sandboxed ${outdir} ${exe} --outfile $(basename ${scanfile}) --npoints 1 --ptmmin 3 --noparams true --fitresult ${fitresult} --nscans ${nscans}
+run_sandboxed ${outdir} ${exe} --outfile $(basename ${scanfile}) --npoints 1 --ptmmin 5 --noparams true --fitresult ${fitresult} --nscans ${nscans}
