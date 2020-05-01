@@ -11,7 +11,7 @@ BATCH_SCRIPT = os.path.join(os.environ['WORK'], 'chic_pol_global_fit',
                             'scripts', 'batch_run_fit.sh')
 DATA_DIR = os.path.join(os.environ['WORK'], 'chic_pol_global_fit', 'data')
 
-def get_batch_base_command(outdir, use_costh, use_psi):
+def get_batch_base_command(outdir, use_costh, use_psi, unphys_corrs):
     """Get the base of all batch commands"""
     return [
         "sbatch", BATCH_SCRIPT,
@@ -19,7 +19,8 @@ def get_batch_base_command(outdir, use_costh, use_psi):
         "--datadir", DATA_DIR,
         "--nographs", "true", "--randomScan", "false",
         "--useCosthRatios", str(use_costh).lower(),
-        "--usePsiPolarizations", str(use_psi).lower()
+        "--usePsiPolarizations", str(use_psi).lower(),
+        "--usePhysicalCorrections", str(unphys_corrs).lower(),
     ]
 
 
@@ -62,7 +63,8 @@ def main(args):
     """Main"""
     base_command = get_batch_base_command(args.outdir,
                                           not args.no_costh_ratios,
-                                          not args.no_psi_polarization)
+                                          not args.no_psi_polarization,
+                                          args.use_physical_corr)
 
     scan_commands = get_scan_commands(args.lambda_low_1, args.lambda_high_1,
                                       args.lambda_low_2, args.lambda_high_2,
@@ -88,6 +90,9 @@ if __name__ == '__main__':
     parser.add_argument('--no-psi-polarization', help='Do not use the psi '
                         'polarization constraints', default=False,
                         action='store_true')
+    parser.add_argument('--use-physical-corr', help='Use corrections '
+                        'calculated from lambda values outside the physically '
+                        'allowed region', default=False, action='store_true')
     parser.add_argument('-l1', '--lambda-low-1', help='Minimal value of lambda 1'
                         ' to be used in the scanning', default=-1.0,
                         type=float)
