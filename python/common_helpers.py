@@ -4,6 +4,7 @@ Module containing some common helper functionality
 """
 import numpy as np
 from scipy.spatial import ConvexHull
+from collections import OrderedDict
 
 import ROOT as r
 
@@ -140,3 +141,71 @@ def get_coverage_contour(hist, coverage=0.683):
                 filled_coords.append([xv, yv])
 
     return contour_as_tgraph(np.array(filled_coords))
+
+
+LABELS = {
+    'lth': '#lambda_{#vartheta}',
+    'dlth': '#Delta#lambda',
+    'jpsi': 'J/#psi',
+    'psip': '#psi(2S)',
+    'chic1': '#chi_{c1}',
+    'chic2': '#chi_{c2}',
+    'chic': '#chi_{c}'
+}
+
+
+def get_label(var):
+    """Get a label for the passed variable"""
+    parts = var.split('_')
+    if parts[0] == 'r':
+        return '{} #rightarrow {} feed down'.format(LABELS.get(parts[1], parts[1]),
+                                                    LABELS.get(parts[2], parts[2]))
+
+    if parts[0] == 'lth':
+        if len(parts) == 2:
+            return '{}^{{{}}}'.format(LABELS['lth'], LABELS.get(parts[1], parts[1]))
+        return '{}^{{{}}} from {}'.format(LABELS['lth'], LABELS.get(parts[1], parts[1]),
+                                          LABELS.get(parts[2], parts[2]))
+
+    if parts[0] == 'dlth':
+        return '{}({},{})'.format(LABELS['dlth'], LABELS.get(parts[1], parts[1]),
+                                  LABELS.get(parts[2], parts[2]))
+
+    return var
+
+
+def get_range(var):
+    """Get the plotting range for a variable"""
+    parts = var.split('_')
+    if parts[0] == 'r':
+        if parts[1] == 'chic2':
+            return [0, 0.15]
+        return [0, 0.3]
+
+    if parts[0] == 'lth':
+        if 'psi' in parts[1]:
+            return [-0.75, 0.75]
+        return [-1.5, 2.0]
+
+    if parts[0] == 'dlth':
+        return [-0.75, 0.75]
+
+    return [None, None]
+
+
+
+def parse_inputs(inputs, enforce_keys=False):
+    files = OrderedDict()
+    for inp in inputs:
+        try:
+            key, fn = inp.split(':')
+        except ValueError as e:
+            # When there is only one input make it possible to pass that
+            # without a legend identifier unless they keys are enforced
+            if enforce_keys:
+                raise(e)
+            key, fn = 'no_leg', inp
+
+        files[key] = r.TFile.Open(fn)
+
+    return files

@@ -12,7 +12,8 @@ r.gROOT.SetBatch()
 
 from utils.plot_helpers import mkplot, default_attributes, setup_legend
 from utils.setup_plot_style import set_TDR_style
-from utils.misc_helpers import flatten
+
+from common_helpers import parse_inputs
 
 # define attributes for up to four different confidence levels per input
 CONT_ATTRS = []
@@ -34,16 +35,6 @@ LEG_C_ATTR = [
     {'color': 12, 'width': 2, 'line': 5}
 ]
 LEG_BF_ATTR = [{'color': 12, 'marker': 34, 'size': 1.5}]
-
-
-def parse_inputs(inputs):
-    """Get the legend entries and files from the inputs"""
-    files = OrderedDict()
-    for inp in inputs:
-        key, fn = inp.split(':')
-        files[key] = r.TFile.Open(fn)
-
-    return files
 
 
 def get_contours(files, conf_level, var_1, var_2):
@@ -110,7 +101,7 @@ def make_plot(contours, best_fits, leg_keys, **kwargs):
 def main(args):
     """Main"""
     set_TDR_style()
-    files = parse_inputs(args.input)
+    files = parse_inputs(args.input, enforce_keys=True)
 
     var_x = 'lambda_1'
     var_y = 'lambda_2'
