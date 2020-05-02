@@ -44,12 +44,14 @@ def make_2d_contour_plot(input_files, var_pair):
     # These are possibly stored in reversed order so the axis have to be
     # flipped
     if var_pair == ('r_chic1_jpsi', 'r_chic2_jpsi'):
-        # First still check whether they have been present in the correct order
-        if not graphs[0]:
-            graphs = [
-                flip_axis(f.Get('corr_2d_{}_{}_1sigma'.format(vary, varx)))
-                for f in input_files.values()
-            ]
+        # try to get them the other way around
+        graphs_2 = [
+            f.Get('corr_2d_{}_{}_1sigma'.format(vary, varx)) for f in input_files.values()
+        ]
+        # Check which graphs are not present and replace them with the flipped axis version
+        for i, g in enumerate(graphs):
+            if not g:
+                graphs[i] = flip_axis(graphs_2[i])
 
 
     if len(graphs) == 1:
