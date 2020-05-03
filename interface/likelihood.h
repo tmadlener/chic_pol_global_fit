@@ -10,6 +10,7 @@
 #include "Fit/FitResult.h"
 #include "TGraphAsymmErrors.h"
 #include "TF1.h"
+#include "TTree.h"
 
 #include <vector>
 #include <array>
@@ -87,6 +88,13 @@ public:
     auto& par = m_startParams[IPAR(name)];
     par.SetValue(val);
     par.Fix();
+  }
+
+  TTree* storeParameterIndices() const
+  {
+    TTree* parIdxTree = new TTree("parameter_indices", "tree with the indices of the parameters");
+    parametersIndicesAsTTree(parIdxTree);
+    return parIdxTree;
   }
 
   /**

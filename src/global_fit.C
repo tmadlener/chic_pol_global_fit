@@ -192,6 +192,9 @@ void global_fit(const std::string& scanFileName="results/scan_file.root",
   fitter.storeFitResult(resultTree);
   resultTree->Write();
 
+  auto* parIdxTree = likelihood.storeParameterIndices();
+  parIdxTree->Write();
+
   scanFile->Close();
 
   if (storeGraphs) {

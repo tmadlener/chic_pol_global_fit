@@ -2,6 +2,7 @@
 #define FIT_PARAMETER_H__
 
 #include "simple_compile_time_map.h"
+#include "TTree.h"
 
 // make it possible to switch the parametrization of the cross section
 // functions:
@@ -124,5 +125,17 @@ static constexpr const char* PARNAME(const int index)
   return getParName(PARAMETERS, index);
 }
 
+template<size_t N=PARAMETERS.size()>
+void parametersIndicesAsTTree(TTree* tree, const std::array<ParameterIndex, N>& parameters=PARAMETERS)
+{
+  std::array<int, N> indices;
+  int i = 0;
+  for (const auto& par : parameters) {
+    indices[i] = par.second;
+    tree->Branch(par.first, &indices[i]);
+    i++;
+  }
+  tree->Fill();
+}
 
 #endif
