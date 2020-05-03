@@ -30,6 +30,12 @@ POL_RANGE = [0, 1]
 B_CHIC2_JPSI = 19.0e-2
 B_CHIC1_JPSI = 34.3e-2
 
+# define colors for J/psi and psi(2S) polarization plot
+JPSI_COL = r.TColor.GetFreeColorIndex()
+TCOLOR_JPSI = r.TColor(JPSI_COL, 13./255, 154./255, 0)
+PSI_COL = r.TColor.GetFreeColorIndex()
+TCOLOR_PSI = r.TColor(PSI_COL, 178./255, 33./255, 179./255)
+
 def psi2S_cs(gfile):
     """psi(2S) cross section plot"""
     graphs = [gfile.Get(n) for n in ['psi2S_CMS_cs', 'psi2S_ATLAS_cs']]
@@ -76,15 +82,18 @@ def chic_cs(gfile):
 def chic_ratio_cs(gfile):
     """chic cross section ratio plot"""
     leg = setup_legend(0.6, 0.7, 0.88, 0.78)
-    can = mkplot(scale_graph(gfile.Get('chic_ratio_CMS_cs'), B_CHIC2_JPSI / B_CHIC1_JPSI),
-                 drawOpt='PE', attr=DATA_ATTR,
-                 leg=leg, legEntries=['B #chi_{c2} / B #chi_{c1} CMS'],
-                 yRange=[0, 1],
-                 xRange=[2, 10], xLabel=PTM_LABEL, yLabel='ratio')
 
-    mkplot(scale_graph(r.TGraph(gfile.Get('chic_ratio_cs_full')), B_CHIC2_JPSI / B_CHIC1_JPSI),
-           can=can, drawOpt='Lsame',
-           leg=leg, legEntries=['model'], legOpt='L')
+    can = mkplot(scale_graph(r.TGraph(gfile.Get('chic_ratio_cs_full')), B_CHIC2_JPSI / B_CHIC1_JPSI),
+                 drawOpt='L', attr=[{'color': 1, 'line': 1, 'width': 2}],
+                 yRange=[0, 1], xRange=[2, 10], xLabel=PTM_LABEL, yLabel='ratio',
+                 leg=leg, legEntries=['model'], legOpt='L')
+
+
+    mkplot(scale_graph(gfile.Get('chic_ratio_CMS_cs'), B_CHIC2_JPSI / B_CHIC1_JPSI),
+           drawOpt='PE same', can=can,
+           attr=[{'color': COL[0], 'marker': 20, 'size': 1.8}],
+           leg=leg, legEntries=['B #chi_{c2} / B #chi_{c1} CMS'])
+
 
     return can
 
@@ -92,14 +101,18 @@ def chic_ratio_cs(gfile):
 def psi_pol(gfile):
     """psi(2S) and J/psi polarization plot"""
     leg = setup_legend(0.6, 0.2, 0.88, 0.36)
-    can = mkplot([gfile.Get(n) for n in ['psi2S_CMS_pol', 'jpsi_CMS_pol']],
-                 drawOpt='PE', attr=DATA_ATTR,
-                 leg=leg, legEntries=['#psi(2S) CMS', 'J/#psi CMS'],
+
+
+    can = mkplot([gfile.Get(n) for n in ['psi_pol_direct', 'jpsi_pol_full']],
+                 drawOpt='L', colors=[PSI_COL, JPSI_COL],
+                 leg=leg, legEntries=['#psi(2S) model', 'J/#psi model'], legOpt='L',
                  xRange=[2, 30], xLabel=PTM_LABEL, yLabel=POL_LABEL, yRange=[-1, 1])
 
-    mkplot([gfile.Get(n) for n in ['psi_pol_direct', 'jpsi_pol_full']],
-           can=can, drawOpt='Lsame', leg=leg, legOpt='L',
-           legEntries=['#psi(2S) model', 'J/#psi model'])
+    mkplot([gfile.Get(n) for n in ['psi2S_CMS_pol', 'jpsi_CMS_pol']],
+                 attr=[{'color': PSI_COL, 'marker': 20, 'size': 0.75},
+                       {'color': JPSI_COL, 'marker': 21, 'size': 0.75}],
+           can=can, drawOpt='PE same', leg=leg,
+           legEntries=['#psi(2S) CMS', 'J/#psi CMS'])
 
     return can
 
@@ -130,7 +143,7 @@ def costh_ratios(gfile):
     return cans
 
 
-def combined_cs(gfile):
+def combined_cs(gfile, only=None):
     """Figure combining all cross sections into one figure"""
     MSIZE = 0.75
     graph_attrs = {
@@ -141,12 +154,20 @@ def combined_cs(gfile):
         'chic2_ATLAS_cs': {'color': COL[1], 'marker': 23, 'size': MSIZE}
     }
 
-    can = mkplot([gfile.Get(g) for g in graph_attrs.keys()], attr=graph_attrs.values(),
+    if only is not None:
+        graphs = [gfile.Get(g) for g in graph_attrs.keys() if only in g]
+        attrs = [graph_attrs[g] for g in graph_attrs.keys() if only in g]
+    else:
+        graphs = [gfile.Get(g) for g in graph_attrs.keys()]
+        attrs = graph_attrs.values()
+
+    can = mkplot(graphs, attr=attrs,
                  drawOpt='PE', xRange=[2, 50], yRange=[1e-5, 30], logy=True, logx=True,
                  xLabel=PTM_LABEL, yLabel=CS_LABEL)
 
-    mkplot([gfile.Get(f) for f in  ['psi_cs_direct', 'jpsi_cs_full', 'chic1_cs_full', 'chic2_cs_full']],
-           can=can, drawOpt='L same', attr=[{'color': 1, 'width': 1, 'line': 1}])
+    if only is None:
+        mkplot([gfile.Get(f) for f in  ['psi_cs_direct', 'jpsi_cs_full', 'chic1_cs_full', 'chic2_cs_full']],
+               can=can, drawOpt='L same', attr=[{'color': 1, 'width': 1, 'line': 1}])
 
 
     leg_graphs = [r.TGraph(1, np.array([10000]), np.array([10000])) for _ in range(4)]
@@ -173,7 +194,11 @@ def main(args):
     for ptm, can in costh_ratios(gfile):
         can.SaveAs('/'.join([args.outdir, 'costh_ratio_ptm_{}.pdf'.format(ptm)]))
 
+    can = combined_cs(gfile, 'ATLAS')
+    can.SaveAs('/'.join([args.outdir, 'combined_cs_ATLAS']) + '.pdf')
 
+    can = combined_cs(gfile, 'CMS')
+    can.SaveAs('/'.join([args.outdir, 'combined_cs_CMS']) + '.pdf')
 
 
 if __name__ == '__main__':
