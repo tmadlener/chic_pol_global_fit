@@ -7,9 +7,10 @@ import ROOT as r
 r.PyConfig.IgnoreCommandLineOptions = True
 
 from utils.data_handling import get_dataframe
-from utils.misc_helpers import flatten, get_bin_cut_root, combine_cuts
+from utils.misc_helpers import flatten
 
-from common_helpers import get_2d_hist, get_coverage_contour
+from common_helpers import get_2d_hist, get_coverage_contour, select_phys_data
+
 
 def process_input_variables(var_str):
     """Process the input variables"""
@@ -20,10 +21,11 @@ def process_input_variables(var_str):
     return var_pairs
 
 
-def make_pair_correlation(data, varx, vary):
+def make_pair_correlation(data, varx, vary, phys_lam):
     """Fit the 2D distribution with a 2d normal distribution and get the
     1 sigma ellipse"""
     print('Processing pair: {}, {}'.format(varx, vary))
+    data = select_phys_data(data, [varx, vary], phys_lam)
     dist_2d = get_2d_hist(data, varx, vary)
 
     cov_graphs = []
@@ -38,20 +40,12 @@ def make_pair_correlation(data, varx, vary):
 
 def main(args):
     """Main"""
-    condition=None
-    if args.physical_lambdas:
-        condition = combine_cuts(
-            (get_bin_cut_root('lth_chic2', -0.6, 1),
-             get_bin_cut_root('lth_chic1', -1./3., 1))
-        )
-
-    data = get_dataframe(args.scanfile, columns=list(flatten(args.variables)), where=condition)
-
+    data = get_dataframe(args.scanfile, columns=list(flatten(args.variables)))
 
     outfile = r.TFile.Open(args.outfile, 'recreate')
 
     for varx, vary in args.variables:
-        corr_graphs = make_pair_correlation(data, varx, vary)
+        corr_graphs = make_pair_correlation(data, varx, vary, args.physical_lambdas)
         for cg in corr_graphs:
             cg.Write()
 

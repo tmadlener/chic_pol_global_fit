@@ -11,6 +11,8 @@ import ROOT as r
 
 from utils.hist_utils import hist2d, get_array, get_binning, find_bin
 from utils.misc_helpers import quantile
+from utils.data_handling import apply_selections
+from utils.selection_functions import select_bin
 
 class RootResult(object):
     """Helper class to mimic the result from root_scalar"""
@@ -194,7 +196,6 @@ def get_range(var):
     return [None, None]
 
 
-
 def parse_inputs(inputs, enforce_keys=False):
     files = OrderedDict()
     for inp in inputs:
@@ -210,3 +211,28 @@ def parse_inputs(inputs, enforce_keys=False):
         files[key] = r.TFile.Open(fn)
 
     return files
+
+
+
+LTH_CHI1_SEL = select_bin('lth_chic1', -1./3., 1)
+LTH_CHI2_SEL = select_bin('lth_chic2', -0.6, 1)
+
+def select_phys_data(dfr, plot_vars, do_selection=True):
+    """Select the data to plot according to the variables that are plotted. If
+    lth_chicJ is in the plot_vars no selection will be applied to it, if it is
+    projected over, it will be restricted to the physically allowed domain"""
+    if not do_selection:
+        return dfr
+
+    if not isinstance(plot_vars, (list, tuple)):
+        plot_vars = [plot_vars]
+
+    selections = []
+    if 'lth_chic1' not in plot_vars:
+        selections.append(LTH_CHI1_SEL)
+    if 'lth_chic2' not in plot_vars:
+        selections.append(LTH_CHI2_SEL)
+
+    selections = selections if selections else None
+
+    return apply_selections(dfr, selections)

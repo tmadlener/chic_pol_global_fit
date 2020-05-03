@@ -16,16 +16,12 @@ import logging
 logging.basicConfig(level=logging.INFO,
                     format='%(levelname)s - %(funcName)s: %(message)s')
 
-from utils.data_handling import get_dataframe, apply_selections
+from utils.data_handling import get_dataframe
 from utils.misc_helpers import quantile
-from utils.selection_functions import select_bin
 
 from common_helpers import (
-    get_var_name, get_variable_binning, frac_to_lam, identity
+    get_var_name, get_variable_binning, frac_to_lam, identity, select_phys_data
 )
-
-CHIC2_POL_SEL = select_bin('lth_chic2', -0.6, 1.0)
-CHIC1_POL_SEL = select_bin('lth_chic1', -1./3., 1.0)
 
 
 def process_input_variables(var_str):
@@ -57,9 +53,11 @@ def get_quantile_values(var_name, trans_f, quants=[0.16, 0.5, 0.84]):
 
 
 
-def make_graph(ptm_group_by, ptm_vals, var_name, trans_f):
+def make_graph(data, ptm_group_by_f, ptm_vals, var_name, trans_f, phys_lam):
     """Make a graph of the passed variable"""
-    quantiles = ptm_group_by.apply(get_quantile_values(var_name, trans_f))
+    data = select_phys_data(data, var_name, phys_lam)
+
+    quantiles = ptm_group_by_f(data).apply(get_quantile_values(var_name, trans_f))
 
     central = np.ones_like(ptm_vals)
     low = np.zeros_like(ptm_vals)
@@ -79,21 +77,15 @@ def main(args):
     """Main"""
     data = get_dataframe(args.scanfile)
 
-    if args.physical_lambdas:
-        logging.info('Removing rows with unphysical chic1 and chic2 lambdas')
-        n_pre = data.shape[0]
-        data = apply_selections(data, (CHIC1_POL_SEL, CHIC2_POL_SEL))
-        logging.info('Rows before: {}, rows afterwards: {}'.format(n_pre, data.shape[0]))
-
     # Get a "helper" ptm binning, that is only used in the groupby to easily
     # identify the different ptM values
     ptm_binning, ptm_vals = get_variable_binning(data.ptM, get_vals=True)
-    ptm_bins = data.groupby(pd.cut(data.ptM, ptm_binning))
+    ptm_groupby = lambda d: d.groupby(pd.cut(d.ptM, ptm_binning))
 
     outfile = r.TFile.Open(args.outfile, 'recreate')
 
     for var, trans in args.variables.iteritems():
-        graph = make_graph(ptm_bins, ptm_vals,  var, trans)
+        graph = make_graph(data, ptm_groupby, ptm_vals,  var, trans, args.physical_lambdas)
         graph.SetName('_'.join([get_var_name(var, trans.__name__), 'v', 'ptm']))
         graph.Write()
 
