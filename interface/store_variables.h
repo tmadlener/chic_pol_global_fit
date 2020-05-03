@@ -46,6 +46,7 @@ struct StoreVariables {
   double r_chic_jpsi;
 
   double chic2_chic1_cs;
+  double chic2_chic1_cs_br;
 
   std::array<double, NPARS()> pVals{};
 };
@@ -81,6 +82,7 @@ TTree* StoreVariables::create(bool storeParams)
   tree->Branch("r_chic_jpsi", &r_chic_jpsi);
 
   tree->Branch("chic2_chic1_cs", &chic2_chic1_cs);
+  tree->Branch("chic2_chic1_cs_br", &chic2_chic1_cs_br);
   tree->Branch("dlth_chic2_chic1", &dlth_chic2_chic1);
 
   if (storeParams) {
@@ -147,6 +149,7 @@ bool StoreVariables::operator()(const double ptm, const std::vector<double>& p)
 
   // cross section ratio and delta lambda for the chic
   chic2_chic1_cs = chic2_cs / chic1_cs;
+  chic2_chic1_cs_br = chic2_chic1_cs * B_CHIC2_JPSI[0] / B_CHIC1_JPSI[0] / br_c2_jpsi * br_c1_jpsi;
   dlth_chic2_chic1 = lth_chic2 - lth_chic1;
 
 
