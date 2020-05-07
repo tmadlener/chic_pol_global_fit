@@ -84,18 +84,18 @@ constexpr std::array<ParameterIndex, 27> PARAMETERS = {{
     {"br_psip_dp", 12},
     {"br_psip_mm", 13},
     {"br_psip_c2", 14},
-    {"br_psip_c1", 14},
-    {"br_psip_jpsi", 15},
-    {"br_c2_jpsi", 16},
-    {"br_c1_jpsi", 17},
-    {"br_jpsi_mm", 18},
+    {"br_psip_c1", 15},
+    {"br_psip_jpsi", 16},
+    {"br_c2_jpsi", 17},
+    {"br_c1_jpsi", 18},
+    {"br_jpsi_mm", 19},
 
-    {"L_CMS", 19},
-    {"L_ATLAS", 20},
+    {"L_CMS", 20},
+    {"L_ATLAS", 21},
 
-    {"norm_costh_1", 21},
-    {"norm_costh_2", 22},
-    {"norm_costh_3", 23},
+    {"norm_costh_1", 22},
+    {"norm_costh_2", 23},
+    {"norm_costh_3", 24},
 #endif
   }};
 
