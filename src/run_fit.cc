@@ -24,7 +24,7 @@ int main(int argc, char* argv[])
   const auto usePsiPolarizations = parser.getOptionVal<bool>("--usePsiPolarizations", true);
   const auto usePhysicalCorrections = parser.getOptionVal<bool>("--usePhysicalCorrections", false);
   const auto fixLambdasChicBestFit = parser.getOptionVal<bool>("--fixLambdasChicBestFit", false);
-
+  const auto minPtM = parser.getOptionVal<double>("--minPtM", 2.0);
 
 
   ScanArguments scanArgs;
@@ -49,7 +49,7 @@ int main(int argc, char* argv[])
   }
 
   global_fit(outfile, graphfile, datadir, scanArgs, useCosthRatios, !nographs, usePsiPolarizations,
-             usePhysicalCorrections, fixLambdasChicBestFit);
+             usePhysicalCorrections, fixLambdasChicBestFit, minPtM);
   return 0;
 }
 #endif

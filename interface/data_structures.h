@@ -80,6 +80,17 @@ std::vector<DataType> readData(const std::string& filename)
 }
 
 template<typename DataType>
+std::vector<DataType> readData(const std::string& filename, const double minPtM)
+{
+  auto data = readData<DataType>(filename);
+  data.erase(std::remove_if(data.begin(), data.end(),
+                            [minPtM](const DataType& p){ return p.ptM < minPtM; }),
+             data.end());
+
+  return data;
+}
+
+template<typename DataType>
 double symError(const DataType& point) { return point.uncer; }
 
 template<typename DataType>

@@ -66,18 +66,18 @@ std::vector<PtCosthRatioMeasurement> read_costh_ratios(const std::string& config
 }
 
 GlobalLikelihood get_likelihood(bool useCosthRatios, bool usePsiPol=true, bool clipCorrs=false,
-                                const std::string& datadir="./data/") {
+                                const std::string& datadir="./data/", const double minPTM=2) {
   // cross section data
-  const auto psi2S_ATLAS_cs = readData<CrossSectionData>(datadir + "/ATLAS_psi2S_cross_section.dat");
-  const auto psi2S_CMS_cs = readData<CrossSectionData>(datadir + "/CMS_psi2S_cross_section.dat");
-  const auto jpsi_CMS_cs = readData<CrossSectionData>(datadir + "/CMS_jpsi_cross_section.dat");
-  const auto chic2_ATLAS_cs = readData<CrossSectionData>(datadir + "/ATLAS_chic2_cross_section.dat");
-  const auto chic1_ATLAS_cs = readData<CrossSectionData>(datadir + "/ATLAS_chic1_cross_section.dat");
-  const auto chic_ratio_CMS_cs = readData<CrossSectionData>(datadir + "/CMS_chic_ratio_cross_section.dat");
+  const auto psi2S_ATLAS_cs = readData<CrossSectionData>(datadir + "/ATLAS_psi2S_cross_section.dat", minPTM);
+  const auto psi2S_CMS_cs = readData<CrossSectionData>(datadir + "/CMS_psi2S_cross_section.dat", minPTM);
+  const auto jpsi_CMS_cs = readData<CrossSectionData>(datadir + "/CMS_jpsi_cross_section.dat", minPTM);
+  const auto chic2_ATLAS_cs = readData<CrossSectionData>(datadir + "/ATLAS_chic2_cross_section.dat", minPTM);
+  const auto chic1_ATLAS_cs = readData<CrossSectionData>(datadir + "/ATLAS_chic1_cross_section.dat", minPTM);
+  const auto chic_ratio_CMS_cs = readData<CrossSectionData>(datadir + "/CMS_chic_ratio_cross_section.dat", minPTM);
 
   // // polarization data
-  const auto psi2S_CMS_pol = readData<PolarizationData>(datadir + "/CMS_psi2S_polarization.dat");
-  const auto jpsi_CMS_pol = readData<PolarizationData>(datadir + "/CMS_jpsi_polarization.dat");
+  const auto psi2S_CMS_pol = readData<PolarizationData>(datadir + "/CMS_psi2S_polarization.dat", minPTM);
+  const auto jpsi_CMS_pol = readData<PolarizationData>(datadir + "/CMS_jpsi_polarization.dat", minPTM);
 
   if (!useCosthRatios) {
     return GlobalLikelihood(psi2S_ATLAS_cs, psi2S_CMS_cs, chic2_ATLAS_cs, chic1_ATLAS_cs,
@@ -144,9 +144,10 @@ void global_fit(const std::string& scanFileName="results/scan_file.root",
                 const std::string& dataDir="./data/",
                 const ScanArguments& scanArgs=ScanArguments{},
                 const bool useCosthRatios=true, const bool storeGraphs=true, bool usePsiPol=true,
-                const bool clipCorrections=false, const bool fixLambasBestFit=false)
+                const bool clipCorrections=false, const bool fixLambasBestFit=false,
+                const double minPtM=2)
 {
-  auto likelihood = get_likelihood(useCosthRatios, usePsiPol, clipCorrections, dataDir);
+  auto likelihood = get_likelihood(useCosthRatios, usePsiPol, clipCorrections, dataDir, minPtM);
 
   if (fixLambasBestFit) {
     LikelihoodFitter fitter;
