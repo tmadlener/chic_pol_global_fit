@@ -309,12 +309,14 @@ double GlobalLikelihood::operator()(const double* p) const
   const auto chic2XSecModel = getChi2XSecModel(p);
   const auto chi2PolModel = getChi2PolModel(p);
 
-  loglike += loglikeCrossSection(m_chic2_ATLAS_cs,
-                                 {chic2XSecModel, psi2SXSecModel}, {chi2PolModel, psiPolModel},
-                                 {id, lambdaPsiToChi2}, {1.0, B_PSIP_CHIC2[0] / br_psip_c2},
+  const std::vector<CSModel> chi2CSModels = {chic2XSecModel, psi2SXSecModel};
+  const std::vector<PolModel> chi2PolModels = {chi2PolModel, psiPolModel};
+  const std::vector<PolFeedDownTrafo> chi2FDTrafos = {id, lambdaPsiToChi2};
+  const std::vector<double> chi2FDFracs = {1.0, B_PSIP_CHIC2[0] / br_psip_c2};
+
+  loglike += loglikeCrossSection(m_chic2_ATLAS_cs, chi2CSModels, chi2PolModels, chi2FDTrafos, chi2FDFracs,
                                  L_ATLAS * br_c2_jpsi * br_jpsi_mm, M_CHIC2,
                                  m_clipCorrectionsPhysicalRange, {-0.6, 1.0});
-
 
 
   const double br_c1_jpsi = p[IPAR("br_c1_jpsi")];
@@ -322,9 +324,12 @@ double GlobalLikelihood::operator()(const double* p) const
   const auto chic1XSecModel = getChi1XSecModel(p);
   const auto chi1PolModel = getChi1PolModel(p);
 
-  loglike += loglikeCrossSection(m_chic1_ATLAS_cs,
-                                 {chic1XSecModel, psi2SXSecModel}, {chi1PolModel, psiPolModel},
-                                 {id, lambdaPsiToChi1}, {1.0, B_PSIP_CHIC1[0] / br_psip_c1},
+  const std::vector<CSModel> chi1CSModels = {chic1XSecModel, psi2SXSecModel};
+  const std::vector<PolModel> chi1PolModels = {chi1PolModel, psiPolModel};
+  const std::vector<PolFeedDownTrafo> chi1FDTrafos = {id, lambdaPsiToChi1};
+  const std::vector<double> chi1FDFracs = {1.0, B_PSIP_CHIC1[0] / br_psip_c1};
+
+  loglike += loglikeCrossSection(m_chic1_ATLAS_cs, chi1CSModels, chi1PolModels, chi1FDTrafos, chi1FDFracs,
                                  L_ATLAS * br_c1_jpsi * br_jpsi_mm, M_CHIC1,
                                  m_clipCorrectionsPhysicalRange, {-1./3., 1.0});
 
@@ -340,45 +345,40 @@ double GlobalLikelihood::operator()(const double* p) const
   // considering double feed-down accordingly. NOTE: The lambdas are only
   // affected in the feed-down decay from psi(2S) -> chi
 
-  loglike += loglikeCrossSection(m_jpsi_CMS_cs,
-                                 {jpsiXSecModel, chic1XSecModel, chic2XSecModel, psi2SXSecModel,
-                                     psi2SXSecModel, psi2SXSecModel},
-                                 {psiPolModel, chi1PolModel, chi2PolModel, psiPolModel,
-                                     psiPolModel, psiPolModel},
-                                 {id, id, id, id, lambdaPsiToChi1, lambdaPsiToChi2},
-                                 {1.0, B_CHIC1_JPSI[0] / br_c1_jpsi, B_CHIC2_JPSI[0] / br_c2_jpsi,
-                                     B_PSIP_JPSI[0] / br_psip_jpsi,
-                                     B_PSIP_CHIC1[0] * B_CHIC1_JPSI[0] / br_c1_jpsi / br_psip_c1,
-                                     B_PSIP_CHIC2[0] * B_CHIC2_JPSI[0] / br_c2_jpsi / br_psip_c2},
+  const std::vector<CSModel> jpsiCSModels = {
+    jpsiXSecModel, chic1XSecModel, chic2XSecModel, psi2SXSecModel,
+    psi2SXSecModel, psi2SXSecModel
+  };
+  const std::vector<PolModel> jpsiPolModels = {
+    psiPolModel, chi1PolModel, chi2PolModel, psiPolModel,
+    psiPolModel, psiPolModel
+  };
+  const std::vector<PolFeedDownTrafo> jpsiFDTrafos = {
+    id, id, id, id, lambdaPsiToChi1, lambdaPsiToChi2
+  };
+  const std::vector<double> jpsiFDFracs = {
+    1.0, B_CHIC1_JPSI[0] / br_c1_jpsi, B_CHIC2_JPSI[0] / br_c2_jpsi, B_PSIP_JPSI[0] / br_psip_jpsi,
+    B_PSIP_CHIC1[0] * B_CHIC1_JPSI[0] / br_c1_jpsi / br_psip_c1,
+    B_PSIP_CHIC2[0] * B_CHIC2_JPSI[0] / br_c2_jpsi / br_psip_c2
+  };
+
+  loglike += loglikeCrossSection(m_jpsi_CMS_cs, jpsiCSModels, jpsiPolModels, jpsiFDTrafos, jpsiFDFracs,
                                  L_CMS * br_jpsi_mm, M_JPSI,
                                  m_clipCorrectionsPhysicalRange, {-1.0, 1.0});
 
 
   loglike += loglikeCrossSectionRatio(m_chic_ratio_CMS_cs,
-                                      {chic2XSecModel, psi2SXSecModel}, {chic1XSecModel, psi2SXSecModel},
-                                      {chi2PolModel, psiPolModel}, {chi1PolModel, psiPolModel},
-                                      {id, lambdaPsiToChi2}, {id, lambdaPsiToChi1},
-                                      {1.0, B_PSIP_CHIC2[0] / br_psip_c2},
-                                      {1.0, B_PSIP_CHIC1[0] / br_psip_c1},
+                                      chi2CSModels, chi1CSModels, chi2PolModels, chi1PolModels,
+                                      chi2FDTrafos, chi1FDTrafos, chi2FDFracs, chi1FDFracs,
                                       br_psip_c2 / br_psip_c1, M_JPSI,
                                       m_clipCorrectionsPhysicalRange, {-0.6, 1.0}, {-1./3., 1.0});
-
 
 
   if (m_usePsiPolarizations) {
     loglike += loglikePolarization(m_psi2S_CMS_pol, {psi2SXSecModel}, {psiPolModel}, {id}, {1.0}, M_PSI2S);
 
     // same as above for the cross-sections. All contributions have to be considered individually
-    loglike += loglikePolarization(m_jpsi_CMS_pol,
-                                   {jpsiXSecModel, chic1XSecModel, chic2XSecModel, psi2SXSecModel,
-                                       psi2SXSecModel, psi2SXSecModel},
-                                   {psiPolModel, chi1PolModel, chi2PolModel, psiPolModel,
-                                       psiPolModel, psiPolModel},
-                                   {id, id, id, id, lambdaPsiToChi1, lambdaPsiToChi2},
-                                   {1.0, B_CHIC1_JPSI[0] / br_c1_jpsi, B_CHIC2_JPSI[0] / br_c2_jpsi,
-                                       B_PSIP_JPSI[0] / br_psip_jpsi,
-                                       B_PSIP_CHIC1[0] * B_CHIC1_JPSI[0] / br_c1_jpsi / br_psip_c1,
-                                       B_PSIP_CHIC2[0] * B_CHIC2_JPSI[0] / br_c2_jpsi / br_psip_c2},
+    loglike += loglikePolarization(m_jpsi_CMS_pol, jpsiCSModels, jpsiPolModels, jpsiFDTrafos, jpsiFDFracs,
                                    M_JPSI);
   }
 
@@ -398,16 +398,12 @@ double GlobalLikelihood::operator()(const double* p) const
       const auto& ratioData = m_chic_ratios_CMS_pol[iPtBin];
 
       std::tie(std::ignore, lambda1) = crossSecAndLambda(ratioData.first, 0.5 / M_JPSI,
-                                                         {chic1XSecModel, psi2SXSecModel},
-                                                         {chi1PolModel,psiPolModel},
-                                                         {id, lambdaPsiToChi1},
-                                                         {1.0, B_PSIP_CHIC1[0] / br_psip_c1});
+                                                         chi1CSModels, chi1PolModels,
+                                                         chi1FDTrafos, chi1FDFracs);
 
       std::tie(std::ignore, lambda2) = crossSecAndLambda(ratioData.first, 0.5 / M_JPSI,
-                                                         {chic2XSecModel, psi2SXSecModel},
-                                                         {chi2PolModel, psiPolModel},
-                                                         {id, lambdaPsiToChi2},
-                                                         {1.0, B_PSIP_CHIC2[0] / br_psip_c2});
+                                                         chi2CSModels, chi2PolModels,
+                                                         chi2FDTrafos, chi2FDFracs);
 
       CosthRatioModel costhRatioModel = [lambda2, lambda1, normalizations, iPtBin] (double costh) {
         return costhRatio(costh, lambda2, lambda1, normalizations[iPtBin]);
@@ -526,9 +522,12 @@ std::vector<TGraphAsymmErrors> GlobalLikelihood::getDataGraphs(const ROOT::Fit::
   const auto chi1XSecModel = getChi1XSecModel(parValues.data());
   const auto chi1PolModel = getChi1PolModel(parValues.data());
 
-  graphs.push_back(correctedCSGraph(m_chic1_ATLAS_cs, {chi1XSecModel, psi2SXSecModel},
-                                    {chi1PolModel, psiPolModel}, {id, lambdaPsiToChi1},
-                                    {1.0, B_PSIP_CHIC1[0] / br_psip_c1},
+  const std::vector<CSModel> chi1CSModels = {chi1XSecModel, psi2SXSecModel};
+  const std::vector<PolModel> chi1PolModels = {chi1PolModel, psiPolModel};
+  const std::vector<PolFeedDownTrafo> chi1FDTrafos = {id, lambdaPsiToChi1};
+  const std::vector<double> chi1FDFracs = {1.0, B_PSIP_CHIC1[0] / br_psip_c1};
+
+  graphs.push_back(correctedCSGraph(m_chic1_ATLAS_cs, chi1CSModels, chi1PolModels, chi1FDTrafos, chi1FDFracs,
                                     L_ATLAS * br_c1_jpsi * br_jpsi_mm, M_CHIC1,
                                     "chic1_ATLAS_cs"));
 
@@ -539,9 +538,12 @@ std::vector<TGraphAsymmErrors> GlobalLikelihood::getDataGraphs(const ROOT::Fit::
   const auto chi2XSecModel = getChi2XSecModel(parValues.data());
   const auto chi2PolModel = getChi2PolModel(parValues.data());
 
-  graphs.push_back(correctedCSGraph(m_chic2_ATLAS_cs, {chi2XSecModel, psi2SXSecModel},
-                                    {chi2PolModel, psiPolModel}, {id, lambdaPsiToChi2},
-                                    {1.0, B_PSIP_CHIC2[0] / br_psip_c2},
+  const std::vector<CSModel> chi2CSModels = {chi2XSecModel, psi2SXSecModel};
+  const std::vector<PolModel> chi2PolModels = {chi2PolModel, psiPolModel};
+  const std::vector<PolFeedDownTrafo> chi2FDTrafos = {id, lambdaPsiToChi2};
+  const std::vector<double> chi2FDFracs = {1.0, B_PSIP_CHIC2[0] / br_psip_c2};
+
+  graphs.push_back(correctedCSGraph(m_chic2_ATLAS_cs, chi2CSModels, chi2PolModels, chi2FDTrafos, chi2FDFracs,
                                     L_ATLAS * br_c2_jpsi * br_jpsi_mm, M_CHIC2,
                                     "chic2_ATLAS_cs"));
 
@@ -549,16 +551,12 @@ std::vector<TGraphAsymmErrors> GlobalLikelihood::getDataGraphs(const ROOT::Fit::
   // chic ratios first have to compute the corrections individually
 
   const auto chi1Corrections = getCorrectionFactors(m_chic_ratio_CMS_cs,
-                                                    {chi1XSecModel, psi2SXSecModel},
-                                                    {chi1PolModel, psiPolModel}, {id, lambdaPsiToChi1},
-                                                    {1.0, B_PSIP_CHIC1[0] / br_psip_c1},
+                                                    chi1CSModels, chi1PolModels, chi1FDTrafos, chi1FDFracs,
                                                     L_ATLAS * br_c1_jpsi * br_jpsi_mm, M_JPSI,
                                                     m_clipCorrectionsPhysicalRange, {-1./3., 1.0});
 
   const auto chi2Corrections = getCorrectionFactors(m_chic_ratio_CMS_cs,
-                                                    {chi2XSecModel, psi2SXSecModel},
-                                                    {chi2PolModel, psiPolModel}, {id, lambdaPsiToChi2},
-                                                    {1.0, B_PSIP_CHIC2[0] / br_psip_c2},
+                                                    chi2CSModels, chi2PolModels, chi2FDTrafos, chi2FDFracs,
                                                     L_ATLAS * br_c2_jpsi * br_jpsi_mm, M_JPSI,
                                                     m_clipCorrectionsPhysicalRange, {-0.6, 1.0});
 
@@ -574,16 +572,18 @@ std::vector<TGraphAsymmErrors> GlobalLikelihood::getDataGraphs(const ROOT::Fit::
   const double br_psip_jpsi = parValues[IPAR("br_psip_jpsi")];
   const auto jpsiXSecModel = getJpsiXSecModel(parValues.data());
 
+  const std::vector<CSModel> jpsiCSModels = {jpsiXSecModel, chi1XSecModel, chi2XSecModel, psi2SXSecModel,
+                                             psi2SXSecModel, psi2SXSecModel};
+  const std::vector<PolModel> jpsiPolModels = {psiPolModel, chi1PolModel, chi2PolModel, psiPolModel,
+                                               psiPolModel, psiPolModel};
+  const std::vector<PolFeedDownTrafo> jpsiFDTrafos = {id, id, id, id, lambdaPsiToChi1, lambdaPsiToChi2};
+  const std::vector<double> jpsiFDFracs = {1.0, B_CHIC1_JPSI[0] / br_c1_jpsi,
+                                           B_CHIC2_JPSI[0] / br_c2_jpsi, B_PSIP_JPSI[0] / br_psip_jpsi,
+                                           B_PSIP_CHIC1[0] * B_CHIC1_JPSI[0] / br_c1_jpsi / br_psip_c1,
+                                           B_PSIP_CHIC2[0] * B_CHIC2_JPSI[0] / br_c2_jpsi / br_psip_c2};
+
   graphs.push_back(correctedCSGraph(m_jpsi_CMS_cs,
-                                    {jpsiXSecModel, chi1XSecModel, chi2XSecModel, psi2SXSecModel,
-                                        psi2SXSecModel, psi2SXSecModel},
-                                    {psiPolModel, chi1PolModel, chi2PolModel, psiPolModel,
-                                        psiPolModel, psiPolModel},
-                                    {id, id, id, id, lambdaPsiToChi1, lambdaPsiToChi2},
-                                    {1.0, B_CHIC1_JPSI[0] / br_c1_jpsi, B_CHIC2_JPSI[0] / br_c2_jpsi,
-                                        B_PSIP_JPSI[0] / br_psip_jpsi,
-                                        B_PSIP_CHIC1[0] * B_CHIC1_JPSI[0] / br_c1_jpsi / br_psip_c1,
-                                        B_PSIP_CHIC2[0] * B_CHIC2_JPSI[0] / br_c2_jpsi / br_psip_c2},
+                                    jpsiCSModels, jpsiPolModels, jpsiFDTrafos, jpsiFDFracs,
                                     L_CMS * br_jpsi_mm, M_JPSI,
                                     "jpsi_CMS_cs"));
 
