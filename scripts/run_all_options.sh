@@ -62,6 +62,7 @@ for fit_opt in ${!FIT_OPTIONS[@]}; do
 
     scanfile=results_${OUT_BASE}/ptm_scan_ptm_2_10_50_50k_${fit_opt}.root
     bandfile=results_${OUT_BASE}/bands_1d_ptm_2_10_50_50k_${fit_opt}.root
+    scanfile_ptm5=results_${OUT_BASE}/scan_ptm_5_2500k_${fit_opt}.root
     bandfile_pl=$(echo ${bandfile} | sed 's/.root/_phys_lambdas.root/')
 
     if [ ${RUN_SCAN} -eq 1 ]; then
@@ -69,6 +70,9 @@ for fit_opt in ${!FIT_OPTIONS[@]}; do
         python ${BAND_SCRIPT} --variables ${BAND_VARS} --outfile ${bandfile} ${scanfile}
         python ${BAND_SCRIPT} --variables ${BAND_VARS} --physical-lambdas\
                --outfile ${bandfile_pl}  ${scanfile}
+
+        ${SCAN_EXE} --ptmmin 5 --npoints 1 --nscans 2500000 --noparams true \
+                    --fitresult ${fitfile} --outfile ${scanfile_ptm5}
     fi
 
     python ${PLOT_1D_SCRIPT} --outdir ${plotdir}/bands_v_ptm/ ${bandfile}
@@ -81,6 +85,8 @@ for fit_opt in ${!FIT_OPTIONS[@]}; do
 
 done
 
+mkdir -p results_${OUT_BASE}/tables
+python python/make_fit_par_table.py results_${OUT_BASE} --outfile results_${OUT_BASE}/tables/fit_results.tex
 
 # just in case set back to clean state and force recompilation with the desired
 # fit option
