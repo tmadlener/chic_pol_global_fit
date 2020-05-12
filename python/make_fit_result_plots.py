@@ -8,17 +8,20 @@ import ROOT as r
 r.PyConfig.IgnoreCommandLineOptions = True
 r.gROOT.SetBatch()
 
-from utils.plot_helpers import mkplot, setup_legend, default_colors
+from utils.plot_helpers import (
+    mkplot, setup_legend, default_colors, _setup_canvas
+)
 from utils.misc_helpers import cond_mkdir
 from utils.setup_plot_style import set_basic_style
 from utils.data_handling import list_obj
-from utils.graph_utils import scale_graph
+from utils.graph_utils import scale_graph, pull_graph
 
 
 COL = default_colors()
 
 DATA_ATTR = [{'color': 1, 'marker': 20, 'size': 0.75},
-             {'color': 1, 'marker': 25, 'size': 0.75}]
+             {'color': 1, 'marker': 25, 'size': 0.75},
+             {'color': 1, 'marker': 26, 'size': 0.75}]
 
 CS_RANGE = [2, 35]
 CS_LABEL = 'd#sigma/dp_{T} (nb/GeV)'
@@ -36,12 +39,49 @@ TCOLOR_JPSI = r.TColor(JPSI_COL, 13./255, 154./255, 0)
 PSI_COL = r.TColor.GetFreeColorIndex()
 TCOLOR_PSI = r.TColor(PSI_COL, 178./255, 33./255, 179./255)
 
+
+def _pull_plot(graphs, model, **kwargs):
+    """Make the pull plot"""
+
+    pull_graphs = [pull_graph(g, model) for g in graphs]
+
+    can = mkplot([r.TLine(CS_RANGE[0], v, CS_RANGE[1], v) for v in [0, 2, -2]],
+                 drawOpt='L', attr=[{'color': 12, 'line': 1, 'width': 2},
+                                    {'color': 12, 'line': 7, 'width': 2},
+                                    {'color': 12, 'line': 7, 'width': 2}],
+                 xRange=CS_RANGE, xLabel=PTM_LABEL, yRange=[-4, 4], logx=True,
+    yLabel='(data - model) / data uncertainty')
+
+    mkplot(pull_graphs, drawOpt='P same', can=can, **kwargs)
+
+    return can
+
+
+def _get_present(gfile, gnames, lentries):
+    """Get the graphs and leg_entries that are present in the file"""
+    graphs, leg_entries = [], []
+    for name, entry in zip(gnames, lentries):
+        g = gfile.Get(name)
+        if g:
+            graphs.append(g)
+            leg_entries.append(entry)
+
+    return graphs, leg_entries
+
+
 def psi2S_cs(gfile):
     """psi(2S) cross section plot"""
-    graphs = [gfile.Get(n) for n in ['psi2S_CMS_cs', 'psi2S_ATLAS_cs']]
-    leg = setup_legend(0.6, 0.7, 0.88, 0.82)
-    can = mkplot(graphs, drawOpt='PE', logy=True, attr=DATA_ATTR,
-                 leg=leg, legEntries=['#psi(2S) {}'.format(e) for e in 'CMS', 'ATLAS'],
+    names = ['psi2S_CMS_cs', 'psi2S_ATLAS_cs']
+    leg_entries = ['#psi(2S) #rightarrow #mu#mu CMS',
+                             '#psi(2S) #rightarrow J/#psi #pi#pi ATLAS']
+
+    graphs, leg_entries = _get_present(gfile, names, leg_entries)
+
+
+    leg = setup_legend(0.5, 0.7, 0.88, 0.86)
+    can = mkplot(graphs, drawOpt='PE', logy=True, logx=True, attr=DATA_ATTR,
+                 leg=leg,
+                 legEntries=leg_entries,
                  xRange=CS_RANGE, xLabel=PTM_LABEL, yLabel=CS_LABEL)
 
     mkplot(gfile.Get('psi_cs_direct'), can=can, drawOpt='Lsame',
@@ -50,17 +90,46 @@ def psi2S_cs(gfile):
     return can
 
 
+def psi2S_cs_pulls(gfile):
+    """psi(2S) cross section pulls"""
+    names = ['psi2S_CMS_cs', 'psi2S_ATLAS_cs']
+    leg_entries = ['#psi(2S) #rightarrow #mu#mu CMS',
+                             '#psi(2S) #rightarrow J/#psi #pi#pi ATLAS']
+
+    graphs, leg_entries = _get_present(gfile, names, leg_entries)
+
+    model = gfile.Get('psi_cs_direct')
+
+    return _pull_plot(graphs, model, legPos=(0.2, 0.8, 0.4, 0.92), legOpt='P',
+                      legEntries=leg_entries)
+
+
 def jpsi_cs(gfile):
     """jpsi cross section plot"""
-    leg = setup_legend(0.6, 0.7, 0.88, 0.78)
-    can = mkplot(gfile.Get('jpsi_CMS_cs'), drawOpt='PE', logy=True, attr=DATA_ATTR,
-                 leg=leg, legEntries=['J/#psi CMS'],
+    graphs, leg_entries = _get_present(gfile, ['jpsi_CMS_cs'],
+                                       ['J/#psi CMS'])
+
+    leg = setup_legend(0.6, 0.7, 0.88, 0.82)
+    can = mkplot(graphs,
+                 drawOpt='PE', logy=True, logx=True, attr=DATA_ATTR,
+                 leg=leg, legEntries=leg_entries,
                  xRange=CS_RANGE, xLabel=PTM_LABEL, yLabel=CS_LABEL)
 
     mkplot(gfile.Get('jpsi_cs_full'), can=can, drawOpt='Lsame',
            leg=leg, legEntries=['best fit'], legOpt='L')
 
     return can
+
+
+def jpsi_cs_pulls(gfile):
+    """jpsi cross section pulls"""
+    graphs, leg_entries = _get_present(gfile, ['jpsi_CMS_cs'],
+                                       ['CMS'])
+    model = gfile.Get('jpsi_cs_full')
+
+    return _pull_plot(graphs, model, legPos=(0.2, 0.8, 0.4, 0.92), legOpt='P',
+                      legEntries=leg_entries)
+
 
 
 def chic_cs(gfile):
@@ -149,16 +218,19 @@ def combined_cs(gfile, only=None):
     graph_attrs = {
         'jpsi_CMS_cs': {'color': COL[0], 'marker': 24, 'size': MSIZE},
         'psi2S_CMS_cs': {'color': COL[0], 'marker': 25, 'size': MSIZE},
-        'psi2S_ATLAS_cs': {'color': COL[1], 'marker': 25, 'size': MSIZE},
+        'psi2S_ATLAS_cs': {'color': COL[1], 'marker': 26, 'size': MSIZE},
         'chic1_ATLAS_cs': {'color': COL[1], 'marker': 22, 'size': MSIZE},
-        'chic2_ATLAS_cs': {'color': COL[1], 'marker': 23, 'size': MSIZE}
+        'chic2_ATLAS_cs': {'color': COL[1], 'marker': 23, 'size': MSIZE},
     }
 
+
     if only is not None:
-        graphs = [gfile.Get(g) for g in graph_attrs.keys() if only in g]
+        # No need for leg_entries here
+        graphs, _ = _get_present(gfile, [g for g in graph_attrs.keys() if only in g],
+                                 [g for g in graph_attrs.keys() if only in g])
         attrs = [graph_attrs[g] for g in graph_attrs.keys() if only in g]
     else:
-        graphs = [gfile.Get(g) for g in graph_attrs.keys()]
+        graphs, _ = _get_present(gfile, graph_attrs.keys(), graph_attrs.keys())
         attrs = graph_attrs.values()
 
     can = mkplot(graphs, attr=attrs,
@@ -170,10 +242,11 @@ def combined_cs(gfile, only=None):
                can=can, drawOpt='L same', attr=[{'color': 1, 'width': 1, 'line': 1}])
 
 
-    leg_graphs = [r.TGraph(1, np.array([10000]), np.array([10000])) for _ in range(4)]
-    mkplot(leg_graphs, can=can, drawOpt='P same', legPos=(0.2, 0.2, 0.4, 0.36),
-           legEntries=['J/#psi', '#psi(2S)', '#chi_{c1}', '#chi_{c2}'], legOpt='P',
-           attr=[graph_attrs[n] for n in ['jpsi_CMS_cs', 'psi2S_CMS_cs',
+    leg_graphs = [r.TGraph(1, np.array([10000]), np.array([10000])) for _ in range(5)]
+    mkplot(leg_graphs, can=can, drawOpt='P same', legPos=(0.2, 0.2, 0.4, 0.40),
+           legEntries=['J/#psi', '#psi(2S) #rightarrow #mu#mu', '#psi(2S) #rightarrow J/#psi #pi#pi',
+                       '#chi_{c1}', '#chi_{c2}'], legOpt='P',
+           attr=[graph_attrs[n] for n in ['jpsi_CMS_cs', 'psi2S_CMS_cs', 'psi2S_ATLAS_cs',
                                           'chic1_ATLAS_cs', 'chic2_ATLAS_cs']])
 
     return can
@@ -187,7 +260,8 @@ def main(args):
 
     cond_mkdir(args.outdir)
 
-    for pfunc in [psi2S_cs, jpsi_cs, chic_cs, chic_ratio_cs, psi_pol, combined_cs]:
+    for pfunc in [psi2S_cs, jpsi_cs, chic_cs, chic_ratio_cs, psi_pol, combined_cs,
+                  psi2S_cs_pulls, jpsi_cs_pulls]:
         can = pfunc(gfile)
         can.SaveAs('/'.join([args.outdir, pfunc.__name__ + '.pdf']))
 
