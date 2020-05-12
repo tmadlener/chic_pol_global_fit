@@ -14,7 +14,7 @@ from utils.plot_helpers import (
 from utils.misc_helpers import cond_mkdir
 from utils.setup_plot_style import set_basic_style
 from utils.data_handling import list_obj
-from utils.graph_utils import scale_graph, pull_graph
+from utils.graph_utils import scale_graph, pull_graph, divide_func, shift_graph
 
 
 COL = default_colors()
@@ -53,6 +53,31 @@ def _pull_plot(graphs, model, **kwargs):
     yLabel='(data - model) / data uncertainty')
 
     mkplot(pull_graphs, drawOpt='P same', can=can, **kwargs)
+
+    return can
+
+
+def _rel_diff_plot(graphs, model, **kwargs):
+    """Make a plot with the relative differences"""
+    # first assign the model values as uncertainties to the graphs
+    delta_graphs = []
+    for g in graphs:
+        x_vals = np.array(g.GetX())
+        y_vals = np.array(g.GetY())
+        fy_vals = np.array([model.Eval(x) for x in x_vals])
+        dy_vals = (y_vals - fy_vals)
+        delta_graphs.append(divide_func(
+            shift_graph(g, -fy_vals), model
+        ))
+        # delta_graphs.append(type(g)(len(x_vals), x_vals, dy_vals, *get_errors(g)))
+
+    can = mkplot(delta_graphs, drawOpt='PE',
+                 xRange=CS_RANGE, xLabel='p_{T}/M', logx=True,
+                 yRange=[-0.5, 0.5],
+                 yLabel='(data - model) / model', **kwargs)
+
+    mkplot(r.TLine(CS_RANGE[0], 0, CS_RANGE[1], 0), can=can, drawOpt='L same',
+           attr=[{'color': 12, 'line': 1, 'width': 2}])
 
     return can
 
@@ -104,6 +129,19 @@ def psi2S_cs_pulls(gfile):
                       legEntries=leg_entries)
 
 
+def psi_2S_rel_diff(gfile):
+    """psi(2S) relative diff plot"""
+    names = ['psi2S_CMS_cs', 'psi2S_ATLAS_cs']
+    leg_entries = ['#psi(2S) #rightarrow #mu#mu CMS',
+                             '#psi(2S) #rightarrow J/#psi #pi#pi ATLAS']
+
+    graphs, leg_entries = _get_present(gfile, names, leg_entries)
+    model = gfile.Get('psi_cs_direct')
+
+    return _rel_diff_plot(graphs, model, legEntries=leg_entries, legOpt='PE',
+                          legPos=(0.2, 0.2, 0.4, 0.32))
+
+
 def jpsi_cs(gfile):
     """jpsi cross section plot"""
     graphs, leg_entries = _get_present(gfile, ['jpsi_CMS_cs'],
@@ -130,6 +168,15 @@ def jpsi_cs_pulls(gfile):
     return _pull_plot(graphs, model, legPos=(0.2, 0.8, 0.4, 0.92), legOpt='P',
                       legEntries=leg_entries)
 
+def jpsi_rel_diff(gfile):
+    """jpsi relative difference"""
+    """jpsi cross section pulls"""
+    graphs, leg_entries = _get_present(gfile, ['jpsi_CMS_cs'],
+                                       ['CMS'])
+    model = gfile.Get('jpsi_cs_full')
+
+    return _rel_diff_plot(graphs, model, legEntries=leg_entries, legOpt='P',
+                          legPos=(0.2, 0.2, 0.4, 0.32))
 
 
 def chic_cs(gfile):
@@ -261,7 +308,7 @@ def main(args):
     cond_mkdir(args.outdir)
 
     for pfunc in [psi2S_cs, jpsi_cs, chic_cs, chic_ratio_cs, psi_pol, combined_cs,
-                  psi2S_cs_pulls, jpsi_cs_pulls]:
+                  psi2S_cs_pulls, jpsi_cs_pulls, psi_2S_rel_diff, jpsi_rel_diff]:
         can = pfunc(gfile)
         can.SaveAs('/'.join([args.outdir, pfunc.__name__ + '.pdf']))
 
