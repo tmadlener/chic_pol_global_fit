@@ -159,7 +159,7 @@ void global_fit(const std::string& scanFileName="results/scan_file.root",
     likelihood.fixParameter("f_long_c1", bfPars[likelihood.getParIdx("f_long_c1")]);
   }
 
-  LikelihoodFitter fitter;
+  LikelihoodFitter fitter(true);
 
   fitter.Fit(likelihood);
   printResult(fitter, likelihood);

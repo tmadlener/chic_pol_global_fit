@@ -23,13 +23,13 @@ bool isGoodFit(int goodFit, const std::vector<double>& parValues) {
 
 class LikelihoodFitter {
 public:
-  LikelihoodFitter() {
+  LikelihoodFitter(bool withMinos=false) {
     ROOT::Math::MinimizerOptions minOpt;
     minOpt.SetMinimizerType("Minuit2");
     minOpt.SetPrintLevel(2);
     minOpt.SetDefaultErrorDef(0.5); // likelihood fit
     fitter.Config().SetMinimizerOptions(minOpt);
-    // fitter.Config().SetMinosErrors(true);
+    fitter.Config().SetMinosErrors(withMinos);
   }
 
   /**
@@ -51,7 +51,21 @@ public:
                   const std::vector<std::pair<int, double>>& covRedFactors={},
                   const double maxDeltaLLH=std::numeric_limits<double>::max());
 
-  void PrintResults() { fitter.GetMinimizer()->PrintResults(); }
+  void PrintResults() {
+    fitter.GetMinimizer()->PrintResults();
+    if (fitter.Config().MinosErrors()) {
+      std::cout << "MINOS Errors:\n";
+      const auto& fitRes = fitter.Result();
+      const auto& parValues = fitRes.Parameters();
+      for (size_t i = 0; i < fitRes.NTotalParameters(); ++i) {
+        const auto name = fitRes.GetParameterName(i);
+        std::cout << name << "\t = " << parValues[i] << "\t";
+        if (fitRes.HasMinosError(i)) {
+          std::cout << "+" << fitRes.UpperError(i) << "\t" << fitRes.LowerError(i) << "\n";
+        }
+      }
+    }
+  }
 
   const ROOT::Fit::FitResult& Result() const { return fitter.Result(); }
 
@@ -90,10 +104,33 @@ public:
     double minVal = fitter.Result().MinFcnValue();
     tree->Branch("min_llh", &minVal);
 
+    std::vector<double>* lowErrors = nullptr;
+    std::vector<double>* upErrors = nullptr;
+
+    if (fitter.Config().MinosErrors()) {
+      const auto& fitRes = fitter.Result();
+
+      lowErrors = new std::vector<double>(fitRes.Parameters().size());
+      upErrors = new std::vector<double>(fitRes.Parameters().size());
+
+      for (size_t i = 0; i < fitRes.NTotalParameters(); ++i) {
+        if (fitRes.HasMinosError(i)) {
+          lowErrors->at(i) = fitRes.LowerError(i);
+          upErrors->at(i) = fitRes.UpperError(i);
+        }
+      }
+
+      tree->Branch("minos_error_low", &lowErrors);
+      tree->Branch("minos_error_up", &upErrors);
+    }
+
     tree->Fill();
 
     delete params;
     delete covMatrix;
+
+    if (lowErrors) delete lowErrors;
+    if (upErrors) delete upErrors;
   }
 
 private:
@@ -118,6 +155,10 @@ void LikelihoodFitter::Scan(const LLH& llh, const ScanSettings& scanSettings, TT
   // avoid too much output from the fitter
   const int oldPrintLevel = fitter.Config().MinimizerOptions().PrintLevel();
   fitter.Config().MinimizerOptions().SetPrintLevel(0);
+  // disable minos as we are really only interested in the minimum here, not the
+  // uncertainties
+  const bool oldMinos = fitter.Config().MinosErrors();
+  fitter.Config().SetMinosErrors(false);
 
   // first do a fit with the usual settings just to make sure that the scan is done around the minimum
   if (!FitFromParams(llh, llh.getStartParams())) {
@@ -236,6 +277,7 @@ void LikelihoodFitter::Scan(const LLH& llh, const ScanSettings& scanSettings, TT
   }
 
   fitter.Config().MinimizerOptions().SetPrintLevel(oldPrintLevel);
+  fitter.Config().SetMinosErrors(oldMinos);
 }
 
 
