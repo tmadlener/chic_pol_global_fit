@@ -24,9 +24,9 @@ constexpr std::array<ParameterIndex, 27> PARAMETERS = {{
     {"sigma_chic1", 2},
     {"sigma_jpsi", 3},
 
-    {"f_long_psi", 4},
-    {"f_long_c1", 5},
-    {"f_long_c2", 6},
+    {"lth_psi", 4},
+    {"lth_c1", 5},
+    {"lth_c2", 6},
 
     {"gamma", 7},
     {"beta_total_psi", 8},

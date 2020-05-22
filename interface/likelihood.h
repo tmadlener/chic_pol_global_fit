@@ -218,13 +218,13 @@ CSModel GlobalLikelihood::getJpsiXSecModel(const double* p)
 
 PolModel GlobalLikelihood::getPsiPolModel(const double* p)
 {
-  const double f_long_psi = p[IPAR("f_long_psi")];
+  const double lth_psi = p[IPAR("lth_psi")];
   const double beta_total_psi = p[IPAR("beta_total_psi")];
   const double beta_long_psi = p[IPAR("beta_long_psi")];
   const double gamma = p[IPAR("gamma")];
 
-  return [f_long_psi, beta_total_psi, beta_long_psi, gamma] (double ptm) {
-    return lambdaTheta(ptm, f_long_psi, beta_long_psi, beta_total_psi, gamma);
+  return [lth_psi, beta_total_psi, beta_long_psi, gamma] (double ptm) {
+    return lambdaThetaAtPtm(ptm, lth_psi, beta_long_psi, beta_total_psi, gamma);
   };
 }
 
@@ -232,11 +232,11 @@ PolModel GlobalLikelihood::getChi1PolModel(const double* p)
 {
   const double beta_long_c1 = p[IPAR("beta_long_c1")];
   const double beta_total_c1 = p[IPAR("beta_total_c1")];
-  const double f_long_c1 = p[IPAR("f_long_c1")];
+  const double lth_c1 = p[IPAR("lth_c1")];
   const double gamma = p[IPAR("gamma")];
 
-  return [f_long_c1, beta_total_c1, beta_long_c1, gamma] (double ptm) {
-    return lambdaTheta(ptm, f_long_c1, beta_long_c1, beta_total_c1, gamma);
+  return [lth_c1, beta_total_c1, beta_long_c1, gamma] (double ptm) {
+    return lambdaThetaAtPtm(ptm, lth_c1, beta_long_c1, beta_total_c1, gamma);
   };
 }
 
@@ -244,11 +244,11 @@ PolModel GlobalLikelihood::getChi2PolModel(const double* p)
 {
   const double beta_long_c2 = p[IPAR("beta_long_c2")];
   const double beta_total_c2 = p[IPAR("beta_total_c2")];
-  const double f_long_c2 = p[IPAR("f_long_c2")];
+  const double lth_c2 = p[IPAR("lth_c2")];
   const double gamma = p[IPAR("gamma")];
 
-  return [f_long_c2, beta_long_c2, beta_total_c2, gamma] (double ptm) {
-    return lambdaTheta(ptm, f_long_c2, beta_long_c2, beta_total_c2, gamma);
+  return [lth_c2, beta_total_c2, beta_long_c2, gamma] (double ptm) {
+    return lambdaThetaAtPtm(ptm, lth_c2, beta_long_c2, beta_total_c2, gamma);
   };
 }
 
@@ -437,9 +437,9 @@ void GlobalLikelihood::defineStartParams()
   setParam("sigma_chic1", 1.0, 1);
   setParam("sigma_jpsi", 1.5, 1);
 
-  setParam("f_long_psi", 0.4, 0.1, 0, 1);
-  setParam("f_long_c1", 0.11, 0.1);
-  setParam("f_long_c2", 0.5, 0.1);
+  setParam("lth_psi", 0.4, 0.1, 0, 1);
+  setParam("lth_c1", 0.11, 0.1);
+  setParam("lth_c2", 0.5, 0.1);
 
   setParam("gamma", 0.65, 0.1);
   setParam("beta_long_psi", 3.5, 0.1);

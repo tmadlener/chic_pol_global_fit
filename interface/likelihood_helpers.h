@@ -60,6 +60,11 @@ double lambdath(const double fLong)
   return (1 - 3 * fLong) / (1 + fLong);
 }
 
+double fracLong(const double lth)
+{
+  return (1 - lth) / (3 + lth);
+}
+
 /**
  * ptm dependent lambda theta from the shape parameters of the two total and
  * longitudional cross sections and the longitudinal fraction at a given
@@ -73,6 +78,14 @@ double lambdaTheta(double ptm, double fLong, double betaLong, double betaTotal, 
   return lambdath(longCont / total);
 }
 
+/**
+ * ptm dependent lambda theta from the shape parameters and lambda theta at a
+ * reference point
+ */
+double lambdaThetaAtPtm(double ptm, double lth, double betaLong, double betaTotal, double gamma)
+{
+  return lambdaTheta(ptm, fracLong(lth), betaLong, betaTotal, gamma);
+}
 
 /**
  * clip the passed value into the passed range

@@ -106,7 +106,7 @@ std::vector<std::pair<int, double>> getCovRedFactors(const LLH& llh, const std::
 
 constexpr std::array<const char*, 25> lambdaContNuissPars = {
   "sigma_psip", "sigma_chic2", "sigma_chic1", "sigma_jpsi",
-  "f_long_psi", "gamma", "beta_long_psi", "beta_trans_psi", "beta_long_c1", "beta_trans_c1",
+  "lth_psi", "gamma", "beta_long_psi", "beta_trans_psi", "beta_long_c1", "beta_trans_c1",
   "beta_long_c2", "beta_trans_c2",
   "br_psip_dp", "br_psip_mm", "br_psip_c2", "br_psip_c1", "br_psip_jpsi", "br_c2_jpsi",
   "br_c1_jpsi", "br_jpsi_mm", "L_CMS", "L_ATLAS",
@@ -155,8 +155,8 @@ void global_fit(const std::string& scanFileName="results/scan_file.root",
     fitter.Fit(likelihood);
 
     const auto& bfPars = fitter.Result().Parameters();
-    likelihood.fixParameter("f_long_c2", bfPars[likelihood.getParIdx("f_long_c2")]);
-    likelihood.fixParameter("f_long_c1", bfPars[likelihood.getParIdx("f_long_c1")]);
+    likelihood.fixParameter("lth_c2", bfPars[likelihood.getParIdx("lth_c2")]);
+    likelihood.fixParameter("lth_c1", bfPars[likelihood.getParIdx("lth_c1")]);
   }
 
   LikelihoodFitter fitter(true);
@@ -185,8 +185,8 @@ void global_fit(const std::string& scanFileName="results/scan_file.root",
     const auto lambda1 = linspace(scanArgs.flow1, scanArgs.fhigh1, scanArgs.nScan1);
     const auto lambda2 = linspace(scanArgs.flow2, scanArgs.fhigh2, scanArgs.nScan2);
 
-    const ScanSettings scanParameters = {{to_frac(lambda1), "f_long_c1"},
-                                         {to_frac(lambda2), "f_long_c2"}};
+    const ScanSettings scanParameters = {{lambda1, "lth_c1"},
+                                         {lambda2, "lth_c2"}};
 
     fitter.Scan(likelihood, scanParameters, scanTree);
     scanTree->Write("", TObject::kWriteDelete);
