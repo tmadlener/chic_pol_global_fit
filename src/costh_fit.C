@@ -31,6 +31,7 @@ void costh_fit(const std::string& outfile="results/costh_scan.root")
   fitter.storeFitResult(resultTree);
   resultTree->Write();
 
+  fitter.setupScanTree(scanTree, false);
   scanTree->Write("", TObject::kWriteDelete);
   scanFile->Close();
 }

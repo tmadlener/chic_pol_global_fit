@@ -133,6 +133,25 @@ public:
     if (upErrors) delete upErrors;
   }
 
+  /**
+   * Set up the tree for scanning
+   */
+  void setupScanTree(TTree* tree, bool goodFitBranch=true)
+  {
+    const auto& params = fitter.Config().ParamsSettings();
+    m_values.reserve(params.size());
+
+    for (size_t i=0; i < params.size(); ++i) {
+      tree->Branch(params[i].Name().c_str(), &m_values[i]);
+    }
+    tree->Branch("llh", &m_llh_val);
+
+    if (goodFitBranch) {
+      tree->Branch("goodFit", &m_goodFit);
+    }
+
+  }
+
 private:
 
   template<typename LLH>
@@ -146,6 +165,12 @@ private:
   }
 
   ROOT::Fit::Fitter fitter{};
+
+  // for scanning. These need to be class variables in order to be able to use
+  // them as TTree branches
+  double m_llh_val{0};
+  int m_goodFit{0};
+  std::vector<double> m_values;
 };
 
 
@@ -166,24 +191,9 @@ void LikelihoodFitter::Scan(const LLH& llh, const ScanSettings& scanSettings, TT
     return;
   }
 
-  // get a COPY here, in order to always start the fit at some "reasonable"
-  // starting point
-  auto params = fitter.Config().ParamsSettings();
-  std::vector<double> values(params.size());
-
-  for (size_t i=0; i < params.size(); ++i) {
-    tree->Branch(params[i].Name().c_str(), &values[i]);
-  }
-  double llh_val;
-  tree->Branch("llh", &llh_val);
-
-  // store all the obtained values, but make it possible to filter out
-  // non-successful fits
-  int goodFit = 1;
-  tree->Branch("goodFit", &goodFit);
-
-  values.assign(fitter.Result().Parameters().cbegin(), fitter.Result().Parameters().cend());
-  llh_val = fitter.Result().MinFcnValue();
+  m_goodFit = 1;
+  m_values.assign(fitter.Result().Parameters().cbegin(), fitter.Result().Parameters().cend());
+  m_llh_val = fitter.Result().MinFcnValue();
   tree->Fill();
 
   // get the internal indices of the parameters that are fixed
@@ -195,6 +205,10 @@ void LikelihoodFitter::Scan(const LLH& llh, const ScanSettings& scanSettings, TT
   auto startTime = ProgressClock::now();
   size_t count{};
   const size_t total = scanSettings.first.values.size() * scanSettings.second.values.size();
+
+  // get a COPY here, in order to always start the fit at some "reasonable"
+  // starting point
+  auto params = fitter.Config().ParamsSettings();
 
   // keep a list of parameter settings that have been used successfully in a
   // previous fit in case the fit from the "standard" starting point does not
@@ -217,12 +231,12 @@ void LikelihoodFitter::Scan(const LLH& llh, const ScanSettings& scanSettings, TT
       params[parIdcs.second].SetValue(p2);
 
 
-      goodFit = FitFromParams(llh, params);
+      m_goodFit = FitFromParams(llh, params);
       const auto& parResults = fitter.Result().Parameters();
 
-      if (isGoodFit(goodFit, parResults)) {
-        values.assign(parResults.cbegin(), parResults.cend());
-        llh_val = fitter.Result().MinFcnValue();
+      if (isGoodFit(m_goodFit, parResults)) {
+        m_values.assign(parResults.cbegin(), parResults.cend());
+        m_llh_val = fitter.Result().MinFcnValue();
 
         lastGoodParams = fitter.Config().ParamsSettings();
       } else {
@@ -235,12 +249,12 @@ void LikelihoodFitter::Scan(const LLH& llh, const ScanSettings& scanSettings, TT
 
         std::cout << "Retrying fitting from last good parameter values\n";
 
-        goodFit = 2 * FitFromParams(llh, lastGoodParams); // indicate a refit in the variable
+        m_goodFit = 2 * FitFromParams(llh, lastGoodParams); // indicate a refit in the variable
         const auto& parResults2 = fitter.Result().Parameters();
 
-        if (isGoodFit(goodFit, parResults2)) {
-          values.assign(parResults2.cbegin(), parResults2.cend());
-          llh_val = fitter.Result().MinFcnValue();
+        if (isGoodFit(m_goodFit, parResults2)) {
+          m_values.assign(parResults2.cbegin(), parResults2.cend());
+          m_llh_val = fitter.Result().MinFcnValue();
 
           lastGoodParams = fitter.Config().ParamsSettings();
         } else {
@@ -253,18 +267,18 @@ void LikelihoodFitter::Scan(const LLH& llh, const ScanSettings& scanSettings, TT
 
           std::cout << "Retrying fitting from the starting parameter values\n";
 
-          goodFit = 3 * FitFromParams(llh, startParams);
+          m_goodFit = 3 * FitFromParams(llh, startParams);
           const auto& parResults3 = fitter.Result().Parameters();
 
-          if (isGoodFit(goodFit, parResults3)) {
-            values.assign(parResults3.cbegin(), parResults3.cend());
-            llh_val = fitter.Result().MinFcnValue();
+          if (isGoodFit(m_goodFit, parResults3)) {
+            m_values.assign(parResults3.cbegin(), parResults3.cend());
+            m_llh_val = fitter.Result().MinFcnValue();
           } else {
             std::cout << "None of the three trials of fitting resulted in a converging fit for "
                       << scanSettings.first.name << " = " << p1 << ", "
                       << scanSettings.second.name << " = " << p2 << "\n";
-            goodFit = 0;
-            llh_val = llh(parResults3.data());
+            m_goodFit = 0;
+            m_llh_val = llh(parResults3.data());
           }
         }
       }
@@ -290,28 +304,19 @@ void LikelihoodFitter::RandomScan(const LLH& llh, TTree* tree, const size_t nSam
   const int oldPrintLevel = fitter.Config().MinimizerOptions().PrintLevel();
   fitter.Config().MinimizerOptions().SetPrintLevel(0);
 
-  const auto& params = fitter.Config().ParamsSettings();
-
   // first do a fit with the usual settings just to make sure that the scan is done around the minimum
-  if (!FitFromParams(llh, params)) {
+  if (!FitFromParams(llh, fitter.Config().ParamsSettings())) {
     std::cerr << "Could not find a valid minimum to scan around\n";
     return;
   }
   fitter.Config().MinimizerOptions().SetPrintLevel(oldPrintLevel);
 
-  std::vector<double> values(params.size());
-  for (size_t i=0; i < params.size(); ++i) {
-    tree->Branch(params[i].Name().c_str(), &values[i]);
-  }
-  double llh_val;
-  tree->Branch("llh", &llh_val);
-
   // fill the minimum in any case
-  values.assign(fitter.Result().Parameters().cbegin(), fitter.Result().Parameters().cend());
-  llh_val = fitter.Result().MinFcnValue();
+  m_values.assign(fitter.Result().Parameters().cbegin(), fitter.Result().Parameters().cend());
+  m_llh_val = fitter.Result().MinFcnValue();
   tree->Fill();
 
-  const double min_llh = llh_val;
+  const double min_llh = m_llh_val;
 
   std::vector<double> covMatrix = GetCovMatrix();
   if (covMatrix.empty()) {
@@ -327,10 +332,10 @@ void LikelihoodFitter::RandomScan(const LLH& llh, TTree* tree, const size_t nSam
   const auto startTime = ProgressClock::now();
   for (size_t i = 0; i < nSamples; ++i) {
     const auto pars = multiVarNorm();
-    llh_val = llh(pars.data());
+    m_llh_val = llh(pars.data());
 
-    if (!std::isnan(llh_val) && (llh_val - min_llh) < maxDeltaLLH) {
-      values.assign(pars.cbegin(), pars.cend());
+    if (!std::isnan(m_llh_val) && (m_llh_val - min_llh) < maxDeltaLLH) {
+      m_values.assign(pars.cbegin(), pars.cend());
       tree->Fill();
       stored++;
     }

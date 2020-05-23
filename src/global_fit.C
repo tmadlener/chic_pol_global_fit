@@ -173,11 +173,14 @@ void global_fit(const std::string& scanFileName="results/scan_file.root",
       // Using maxDeltaLLH = 2u, allows to go to a deltaChi2 value of 25 which
       // should be enough for almost everything
       fitter.RandomScan(likelihood, scanTree, scanArgs.nSamplePoints, covRedFactors, 25);
+      fitter.setupScanTree(scanTree, false);
+
       scanTree->Write("", TObject::kWriteDelete);
   }
 
   if (scanArgs.nScan1 > 0 && scanArgs.nScan2 > 0) {
     TTree* scanTree = new TTree("log_like_scan", "log likelihood scan values");
+    fitter.setupScanTree(scanTree, true);
 
     const auto lambda1 = linspace(scanArgs.flow1, scanArgs.fhigh1, scanArgs.nScan1);
     const auto lambda2 = linspace(scanArgs.flow2, scanArgs.fhigh2, scanArgs.nScan2);
