@@ -168,13 +168,31 @@ void global_fit(const std::string& scanFileName="results/scan_file.root",
 
   if (scanArgs.randomScan && scanArgs.nSamplePoints > 0) {
       TTree* scanTree = new TTree("log_like_scan", "log likelihood scan values");
-
-      const auto covRedFactors = getCovRedFactors(likelihood, lambdaContNuissPars);
-      // Using maxDeltaLLH = 2u, allows to go to a deltaChi2 value of 25 which
-      // should be enough for almost everything
-      fitter.RandomScan(likelihood, scanTree, scanArgs.nSamplePoints, covRedFactors, 25);
       fitter.setupScanTree(scanTree, false);
 
+      // do the random sampling scan using different "widths" of the
+      // multivariate normal distribution that is used to generate random
+      // parameter sampling points. At full width the spread of the parameter
+      // values is simply too large to do an efficient scanning. By using
+      // narrower multivariate normal distributions (with the same correlations)
+      // this efficiency can be increased without generating too many points
+      // that are uselessly close to the minimum
+      const std::vector<std::pair<double, size_t>> subSampleSettings = {
+        {4, scanArgs.nSamplePoints / 8},
+        {6.25, scanArgs.nSamplePoints / 8},
+        {7.5625, scanArgs.nSamplePoints / 8},
+        {9., scanArgs.nSamplePoints / 8},
+        {10.5625, scanArgs.nSamplePoints / 8},
+        {12.25, scanArgs.nSamplePoints / 8},
+        {14.0625, scanArgs.nSamplePoints / 8},
+        {16., scanArgs.nSamplePoints / 8}
+      };
+      for (const auto& subSamp : subSampleSettings) {
+        std::cout << "Scanning using multivariate normal distribution with variances reduced by factor " << subSamp.first << "\n";
+        // Using maxDeltaLLH = 15 allows to go to a deltaChi2 value of 30, which
+        // should be enough for all practical purposes
+        fitter.RandomScan(likelihood, scanTree, subSamp.second, 1 / subSamp.first, 15);
+      }
       scanTree->Write("", TObject::kWriteDelete);
   }
 

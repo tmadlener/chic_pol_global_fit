@@ -48,7 +48,7 @@ public:
 
   template<typename LLH>
   void RandomScan(const LLH& llh, TTree* tree, const size_t nSamples=1000000,
-                  const std::vector<std::pair<int, double>>& covRedFactors={},
+                  const double varRedFactor=1.0,
                   const double maxDeltaLLH=std::numeric_limits<double>::max());
 
   void PrintResults() {
@@ -297,7 +297,7 @@ void LikelihoodFitter::Scan(const LLH& llh, const ScanSettings& scanSettings, TT
 
 template<typename LLH>
 void LikelihoodFitter::RandomScan(const LLH& llh, TTree* tree, const size_t nSamples,
-                                  const std::vector<std::pair<int, double>>& covRedFactors,
+                                  const double varRedFactor,
                                   const double maxDeltaLLH)
 {
   // avoid too much output from the fitter
@@ -323,7 +323,7 @@ void LikelihoodFitter::RandomScan(const LLH& llh, TTree* tree, const size_t nSam
     return;
   }
 
-  covMatrix = change_variance(covMatrix, covRedFactors);
+  covMatrix = reduce_variance(covMatrix, varRedFactor);
 
   auto means = fitter.Result().Parameters();
   const MultivariateNormalDistribution<> multiVarNorm(means, covMatrix);

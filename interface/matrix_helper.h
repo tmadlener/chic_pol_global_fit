@@ -104,5 +104,17 @@ std::vector<double> change_variance(const std::vector<double>& cov,
   return cov_matrix(corr, vars);
 }
 
+/**
+ * Reduce the variance of all variables by the passed factor
+ */
+std::vector<double> reduce_variance(const std::vector<double>& cov, const double factor)
+{
+  std::vector<double> vars = variances(cov);
+  for (auto& var : vars) {
+    var *= factor;
+  }
+  return cov_matrix(corr_matrix(cov), vars);
+}
+
 
 #endif
