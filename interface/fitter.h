@@ -21,6 +21,24 @@ bool isGoodFit(int goodFit, const std::vector<double>& parValues) {
           std::none_of(parValues.cbegin(), parValues.cend(), [] (double d) { return std::isnan(d); }));
 }
 
+struct MaxDeltaLLH {
+  bool operator()(double llh, double min_llh) const { return (llh - min_llh) < minDelta; }
+
+  double minDelta{std::numeric_limits<double>::max()};
+};
+
+struct DeltaChi2 {
+  DeltaChi2(double dChi2=2.2977) : high(dChi2 + 0.1), low(dChi2 - 0.1) {}
+
+  bool operator()(double llh, double min_llh) const {
+    const double delta = 2 * (llh - min_llh);
+    return (delta > low && delta < high);
+  }
+
+  double high;
+  double low;
+};
+
 class LikelihoodFitter {
 public:
   LikelihoodFitter(bool withMinos=false) {
@@ -46,10 +64,10 @@ public:
   template<typename LLH>
   void Scan(const LLH& llh, const ScanSettings& scanSettings, TTree* tree);
 
-  template<typename LLH>
+  template<typename LLH, typename StoreCondF>
   void RandomScan(const LLH& llh, TTree* tree, const size_t nSamples=1000000,
                   const double varRedFactor=1.0,
-                  const double maxDeltaLLH=std::numeric_limits<double>::max());
+                  StoreCondF storeCondF=MaxDeltaLLH{});
 
   void PrintResults() {
     fitter.GetMinimizer()->PrintResults();
@@ -295,10 +313,10 @@ void LikelihoodFitter::Scan(const LLH& llh, const ScanSettings& scanSettings, TT
 }
 
 
-template<typename LLH>
+template<typename LLH, typename StoreCondF>
 void LikelihoodFitter::RandomScan(const LLH& llh, TTree* tree, const size_t nSamples,
                                   const double varRedFactor,
-                                  const double maxDeltaLLH)
+                                  StoreCondF storeCond)
 {
   // avoid too much output from the fitter
   const int oldPrintLevel = fitter.Config().MinimizerOptions().PrintLevel();
@@ -334,7 +352,7 @@ void LikelihoodFitter::RandomScan(const LLH& llh, TTree* tree, const size_t nSam
     const auto pars = multiVarNorm();
     m_llh_val = llh(pars.data());
 
-    if (!std::isnan(m_llh_val) && (m_llh_val - min_llh) < maxDeltaLLH) {
+    if (!std::isnan(m_llh_val) && storeCond(m_llh_val, min_llh)) {
       m_values.assign(pars.cbegin(), pars.cend());
       tree->Fill();
       stored++;

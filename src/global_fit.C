@@ -189,9 +189,7 @@ void global_fit(const std::string& scanFileName="results/scan_file.root",
       };
       for (const auto& subSamp : subSampleSettings) {
         std::cout << "Scanning using multivariate normal distribution with variances reduced by factor " << subSamp.first << "\n";
-        // Using maxDeltaLLH = 15 allows to go to a deltaChi2 value of 30, which
-        // should be enough for all practical purposes
-        fitter.RandomScan(likelihood, scanTree, subSamp.second, 1 / subSamp.first, 15);
+        fitter.RandomScan(likelihood, scanTree, subSamp.second, 1 / subSamp.first, DeltaChi2(2.2977));
       }
       scanTree->Write("", TObject::kWriteDelete);
   }
