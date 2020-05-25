@@ -64,7 +64,7 @@ public:
   template<typename LLH>
   void Scan(const LLH& llh, const ScanSettings& scanSettings, TTree* tree);
 
-  template<typename LLH, typename StoreCondF>
+  template<typename LLH, typename StoreCondF=decltype(MaxDeltaLLH{})>
   void RandomScan(const LLH& llh, TTree* tree, const size_t nSamples=1000000,
                   const double varRedFactor=1.0,
                   StoreCondF storeCondF=MaxDeltaLLH{});
