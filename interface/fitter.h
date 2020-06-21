@@ -45,7 +45,7 @@ public:
     ROOT::Math::MinimizerOptions minOpt;
     minOpt.SetMinimizerType("Minuit2");
     minOpt.SetPrintLevel(2);
-    minOpt.SetDefaultErrorDef(0.5); // likelihood fit
+    minOpt.SetErrorDef(0.5); // likelihood fit
     fitter.Config().SetMinimizerOptions(minOpt);
     fitter.Config().SetMinosErrors(withMinos);
   }
