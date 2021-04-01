@@ -1,3 +1,6 @@
+#ifndef GLOBAL_FIT_SDC_H
+#define GLOBAL_FIT_SDC_H
+
 #include <array>
 #include <cmath>
 #include <fstream>
@@ -314,3 +317,5 @@ SDC read_from_file(std::string filename, SDCType sdcType = SDCType::LP_NLO) {
   return SDC(std::move(points), std::move(values));
 }
 } // namespace sdc
+
+#endif
