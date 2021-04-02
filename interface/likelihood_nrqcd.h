@@ -4,6 +4,7 @@
 #include "constants.h"
 #include "data_structures.h"
 #include "likelihood_helpers.h"
+#include "sdc.h"
 
 #include "Fit/FitResult.h"
 #include "Fit/ParameterSettings.h"
@@ -41,7 +42,8 @@ public:
    * Constructor with signature that is compatible with the GlobalLikelihood
    * constructor signature
    * */
-  GlobalLikelihoodNRQCD(GlobalFitData&& data) :
+  GlobalLikelihoodNRQCD(const GlobalFitData&& data, const sdc::StateSDCs&& psi_SDC, const sdc::StateSDCs&& chic1_SDC,
+                        const sdc::StateSDCs&& chic2_SDC) :
       m_psi2S_ATLAS_cs(std::move(data.psi2S_ATLAS_cs)),
       m_psi2S_CMS_cs(std::move(data.psi2S_CMS_cs)),
       m_chic2_ATLAS_cs(std::move(data.chic2_ATLAS_cs)),
@@ -50,7 +52,10 @@ public:
       m_chic_ratio_CMS_cs(std::move(data.chic_ratio_CMS_cs)),
       m_psi2S_CMS_pol(std::move(data.psi2S_CMS_pol)),
       m_jpsi_CMS_pol(std::move(data.jpsi_CMS_pol)),
-      m_chic_ratios_CMS_pol(std::move(data.chic_costh_ratios_CMS)) {
+      m_chic_ratios_CMS_pol(std::move(data.chic_costh_ratios_CMS)),
+      m_SDC_psi(std::move(psi_SDC)),
+      m_SDC_chic1(std::move(chic1_SDC)),
+      m_SDC_chic2(std::move(chic2_SDC)) {
     setupFit();
   }
 
@@ -148,6 +153,12 @@ private:
   PolarizationMeasurement m_jpsi_CMS_pol;
 
   std::vector<PtCosthRatioMeasurement> m_chic_ratios_CMS_pol;
+
+  sdc::StateSDCs m_SDC_psi;
+  // Total and longitudinal chic1 SDCs as observed after their decay into a
+  // J/psi
+  sdc::StateSDCs m_SDC_chic1;
+  sdc::StateSDCs m_SDC_chic2;
 
   ParamsSettings m_startParams{NPARS()}; // default initialize
   std::vector<std::pair<int, NuissanceParameter>> m_nuissParams;

@@ -84,9 +84,13 @@ std::vector<DataType> readData(const std::string& filename)
     return data;
   }
 
+  std::cout << "Reading data from: \'" << filename << "\' ... ";
+
   while(std::getline(file, line)) {
     data.emplace_back(line);
   }
+
+  std::cout << "(" << data.size() << " data points)\n";
 
   return data;
 }
@@ -95,9 +99,15 @@ template<typename DataType>
 std::vector<DataType> readData(const std::string& filename, const double minPtM)
 {
   auto data = readData<DataType>(filename);
+  const auto sizePre = data.size();
   data.erase(std::remove_if(data.begin(), data.end(),
                             [minPtM](const DataType& p){ return p.ptM < minPtM; }),
              data.end());
+
+  if (data.size() != sizePre) {
+    std::cerr << "INFO: Removed " << sizePre - data.size() << " data points due to min pT/M ("
+              << minPtM << ") requirement" << std::endl;
+  }
 
   return data;
 }

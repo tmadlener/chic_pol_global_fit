@@ -4,6 +4,7 @@
 #include <array>
 #include <cmath>
 #include <fstream>
+#include <functional>
 #include <iostream>
 #include <sstream>
 #include <string>
@@ -117,10 +118,17 @@ public:
    */
   friend std::ostream& operator<<(std::ostream& os, const SDC& sdc);
 
+  // /**
+  //  * Scale the SDC values by a constant factor
+  //  */
+  // friend SDC operator*(double factor, const SDC& sdc);
+
   /**
-   * Scale the SDC values by a constant factor
+   * Many different functions involving a scalar can be implemented generically,
+   * they only differ in the way the values are combined
    */
-  friend SDC operator*(double factor, const SDC& sdc);
+  template <typename T, typename BinaryValueOp>
+  friend SDC scalar_op(const T val, const SDC& rhs, BinaryValueOp&& binOP);
 
   /**
    * Many of the functions above can be implemented generically, they only
@@ -221,10 +229,33 @@ SDC operator+(const SDC& lhs, const SDC& rhs) { return binary_op(lhs, rhs, std::
 SDC operator-(const SDC& lhs, const SDC& rhs) { return binary_op(lhs, rhs, std::minus<double>{}); }
 
 /**
+ * Multiply two SDC (values), assuming they have the same supports.
+ *
+ * NOTE: not strictly necessary for SDCs themselves, but allows to simplify some
+ * of the manipulations we do at the start
+ */
+SDC operator*(const SDC& lhs, const SDC& rhs) { return binary_op(lhs, rhs, std::multiplies<double>{}); }
+
+/**
  * Divide the numerator SDC (values) by the denominator SDC (values), given the
  * two have the same support
  */
 SDC operator/(const SDC& num, const SDC& denom) { return binary_op(num, denom, std::divides<double>{}); }
+
+/**
+ * Scale an SDC by a constant factor
+ */
+SDC operator*(const double scale, const SDC& sdc) { return scalar_op(scale, sdc, std::multiplies<double>{}); }
+
+/**
+ * Shift an SDC by a constant factor
+ */
+SDC operator+(const double shift, const SDC& sdc) { return scalar_op(shift, sdc, std::plus<double>{}); }
+
+/**
+ * Subtract an SDC from a constant factor
+ */
+SDC operator-(const double shift, const SDC& sdc) { return scalar_op(shift, sdc, std::minus<double>{}); }
 
 std::ostream& operator<<(std::ostream& os, const SDC& sdc) {
   for (size_t i = 0; i < sdc.m_size; ++i) {
@@ -244,10 +275,13 @@ std::ostream& operator<<(std::ostream& os, const MultiSDC& sdc) {
   return os;
 }
 
-SDC operator*(double factor, const SDC& sdc) {
+template <typename T, typename BinaryValueOp>
+SDC scalar_op(const T val, const SDC& sdc, BinaryValueOp&& binOP) {
+  static_assert(std::is_arithmetic_v<T>, "Can only do scalar operations on SDCs with arithmetic types");
+
   auto values = sdc.m_values;
   for (auto& v : values)
-    v *= factor;
+    binOP(val, v);
 
   return SDC(sdc.m_supports, std::move(values));
 }
@@ -276,6 +310,8 @@ enum class SDCType {
   NLO = 2,    ///< NLO is the third column
 };
 
+constexpr std::array<const char*, 3> SDCTypeNames = {"LP+NLO", "LO", "NLO"};
+
 namespace util {
   /**
    * Convert an enum (class) value to something that is usable as an array index
@@ -298,6 +334,9 @@ SDC read_from_file(std::string filename, SDCType sdcType = SDCType::LP_NLO) {
     std::exit(1); // TODO: Does this have to be fatal?
   }
 
+  std::cout << "Reading SDC from file \'" << filename << "\' using type \'" << SDCTypeNames[to_index(sdcType)]
+            << "\' ... ";
+
   std::string line;
   std::vector<double> points, values;
   while (std::getline(infile, line)) {
@@ -314,8 +353,18 @@ SDC read_from_file(std::string filename, SDCType sdcType = SDCType::LP_NLO) {
     values.push_back(vals[to_index(sdcType)]);
   }
 
+  std::cout << "(" << points.size() << " value pairs)\n";
+
   return SDC(std::move(points), std::move(values));
 }
+
+/**
+ * Helper struct for easier passing of SDCs
+ */
+struct StateSDCs {
+  MultiSDC tot;
+  MultiSDC lng; // Cannot name it long because that is a builtin
+};
 } // namespace sdc
 
 #endif
