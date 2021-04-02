@@ -30,6 +30,12 @@ struct CrossSectionData {
     sline >> this->high;
   }
 
+  CrossSectionData(const CrossSectionData&) = default;
+  CrossSectionData(CrossSectionData&&) = default;
+  CrossSectionData& operator=(const CrossSectionData&) = default;
+  CrossSectionData& operator=(CrossSectionData&&) = default;
+  ~CrossSectionData() = default;
+
   double ptM;
   double xSec;
   double uncer;
@@ -49,6 +55,12 @@ struct PolarizationData {
     sline >> this->low;
     sline >> this->high;
   }
+
+  PolarizationData(const PolarizationData&) = default;
+  PolarizationData(PolarizationData&&) = default;
+  PolarizationData& operator=(const PolarizationData&) = default;
+  PolarizationData& operator=(PolarizationData&&) = default;
+  ~PolarizationData() = default;
 
   double ptM;
   double lth;
@@ -186,6 +198,13 @@ struct CosthRatioData {
     sstr >> this->u_high;
   }
 
+  CosthRatioData(const CosthRatioData&) = default;
+  CosthRatioData(CosthRatioData&&) = default;
+  CosthRatioData& operator=(const CosthRatioData&) = default;
+  CosthRatioData& operator=(CosthRatioData&&) = default;
+  ~CosthRatioData() = default;
+
+
   double costh;
   double low;
   double high;
@@ -218,5 +237,24 @@ TGraphAsymmErrors asTGraph(const CosthRatioMeasurement& data)
 
 
 using ParamsSettings = std::vector<ROOT::Fit::ParameterSettings>;
+
+/**
+ * Helper struct to hold all the global fit data, to make it easier to pass
+ * around
+ */
+struct GlobalFitData {
+  CrossSectionMeasurement psi2S_ATLAS_cs;
+  CrossSectionMeasurement psi2S_CMS_cs;
+  CrossSectionMeasurement jpsi_CMS_cs;
+  CrossSectionMeasurement chic2_ATLAS_cs;
+  CrossSectionMeasurement chic1_ATLAS_cs;
+  CrossSectionMeasurement chic_ratio_CMS_cs;
+
+  PolarizationMeasurement psi2S_CMS_pol;
+  PolarizationMeasurement jpsi_CMS_pol;
+
+  std::vector<PtCosthRatioMeasurement> chic_costh_ratios_CMS;
+};
+
 
 #endif

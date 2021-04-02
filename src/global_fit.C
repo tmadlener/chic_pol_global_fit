@@ -81,6 +81,20 @@ void printResult(const LikelihoodFitter& fitter, const GlobalLikelihood& llh)
   std::cout.flags(fmtflags);
 }
 
+GlobalLikelihood get_likelihood(bool useCosthRatios, bool usePsiPol=true, bool clipCorrs=false,
+                                const std::string& datadir="./data", const double minPTM=2) {
+  const auto data = read_all_data(datadir, minPTM);
+
+  if (!useCosthRatios) {
+    return GlobalLikelihood(data.psi2S_ATLAS_cs, data.psi2S_CMS_cs, data.chic2_ATLAS_cs, data.chic1_ATLAS_cs, data.jpsi_CMS_cs,
+               data.chic_ratio_CMS_cs, data.psi2S_CMS_pol, data.jpsi_CMS_pol, clipCorrs);
+  }
+
+  return GlobalLikelihood(data.psi2S_ATLAS_cs, data.psi2S_CMS_cs, data.chic2_ATLAS_cs, data.chic1_ATLAS_cs, data.jpsi_CMS_cs,
+             data.chic_ratio_CMS_cs, data.psi2S_CMS_pol, data.jpsi_CMS_pol, data.chic_costh_ratios_CMS, usePsiPol,
+             clipCorrs);
+}
+
 
 void global_fit(const std::string& scanFileName="results/scan_file.root",
                 const std::string& graphFileName="results/fit_result_graphs.root",
@@ -90,7 +104,7 @@ void global_fit(const std::string& scanFileName="results/scan_file.root",
                 const bool clipCorrections=false, const bool fixLambasBestFit=false,
                 const double minPtM=2)
 {
-  auto likelihood = get_likelihood<GlobalLikelihood>(useCosthRatios, usePsiPol, clipCorrections, dataDir, minPtM);
+  auto likelihood = get_likelihood(useCosthRatios, usePsiPol, clipCorrections, dataDir, minPtM);
 
   if (fixLambasBestFit) {
     LikelihoodFitter fitter;

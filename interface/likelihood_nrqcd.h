@@ -41,33 +41,17 @@ public:
    * Constructor with signature that is compatible with the GlobalLikelihood
    * constructor signature
    * */
-  GlobalLikelihoodNRQCD(const CrossSectionMeasurement& psi2S_ATLAS, const CrossSectionMeasurement& psi2S_CMS,
-                        const CrossSectionMeasurement& chic2_ATLAS, const CrossSectionMeasurement& chic1_ATLAS,
-                        const CrossSectionMeasurement& jpsi_CMS, const CrossSectionMeasurement& chic_ratio_CMS,
-                        const PolarizationMeasurement& psi2S_CMS_p, const PolarizationMeasurement& jpsi_CMS_p,
-                        const std::vector<PtCosthRatioMeasurement> chic_costh_ratios_CMS, bool, bool) :
-      m_psi2S_ATLAS_cs(psi2S_ATLAS),
-      m_psi2S_CMS_cs(psi2S_CMS),
-      m_chic2_ATLAS_cs(chic2_ATLAS),
-      m_chic1_ATLAS_cs(chic1_ATLAS),
-      m_jpsi_CMS_cs(jpsi_CMS),
-      m_chic_ratio_CMS_cs(chic_ratio_CMS),
-      m_psi2S_CMS_pol(psi2S_CMS_p),
-      m_jpsi_CMS_pol(jpsi_CMS_p),
-      m_chic_ratios_CMS_pol(chic_costh_ratios_CMS) {
+  GlobalLikelihoodNRQCD(GlobalFitData&& data) :
+      m_psi2S_ATLAS_cs(std::move(data.psi2S_ATLAS_cs)),
+      m_psi2S_CMS_cs(std::move(data.psi2S_CMS_cs)),
+      m_chic2_ATLAS_cs(std::move(data.chic2_ATLAS_cs)),
+      m_chic1_ATLAS_cs(std::move(data.chic1_ATLAS_cs)),
+      m_jpsi_CMS_cs(std::move(data.jpsi_CMS_cs)),
+      m_chic_ratio_CMS_cs(std::move(data.chic_ratio_CMS_cs)),
+      m_psi2S_CMS_pol(std::move(data.psi2S_CMS_pol)),
+      m_jpsi_CMS_pol(std::move(data.jpsi_CMS_pol)),
+      m_chic_ratios_CMS_pol(std::move(data.chic_costh_ratios_CMS)) {
     setupFit();
-  }
-
-  /**
-   * Constructor without costh ratios. Only here for compatibility with global likelihood. Entering this will terminate
-   * the program
-   *
-   * TODO: clean up the function that builds the likelihoods to be able to remove this
-   */
-  GlobalLikelihoodNRQCD(const CrossSectionMeasurement&, const CrossSectionMeasurement&, const CrossSectionMeasurement&,
-                        const CrossSectionMeasurement&, const CrossSectionMeasurement&, const CrossSectionMeasurement&,
-                        const PolarizationMeasurement&, const PolarizationMeasurement&, bool) {
-    throw std::runtime_error("Fitting without costh ratios is not implemented for the NRQCD fit");
   }
 
   /**
