@@ -1,6 +1,10 @@
 #ifndef GLOBAL_FIT_SDC_H
 #define GLOBAL_FIT_SDC_H
 
+#include "misc_util.h"
+
+#include "TGraph.h"
+
 #include <array>
 #include <cmath>
 #include <fstream>
@@ -12,31 +16,7 @@
 #include <vector>
 
 namespace sdc {
-namespace util {
-  inline double interpolate(double x, double x0, double x1, double y0, double y1) {
-    return y0 + (x - x0) * (y1 - y0) / (x1 - x0);
-  }
-
-  /**
-   * Linearly interpolate in the logarithmic space in the y values
-   */
-  inline double log_interpolate(double x, double x0, double x1, double y0, double y1) {
-    const double logy0 = std::log(y0);
-    const double logy1 = std::log(y1);
-
-    return std::exp(logy0 + (x - x0) * (logy1 - logy0) / (x1 - x0));
-  }
-
-  /**
-   * Find the bin index corresponding to the given x value
-   */
-  inline int find_bin(double x, const std::vector<double>& points) {
-    for (size_t i = 0; i < points.size(); ++i) {
-      if (x >= points[i] && x <= points[i + 1]) { return i; }
-    }
-    return -1; // fail somewhere but not here
-  }
-
+namespace detail {
   /**
    * Check whether the two vectors describe the same support points
    */
@@ -67,7 +47,7 @@ namespace util {
     return sum;
   }
 
-} // namespace util
+} // namespace detail
 
 class SDC {
   friend class MultiSDC;
@@ -112,6 +92,11 @@ public:
     }
     return std::nan("");
   }
+
+  /**
+   * Get the stored SDC as TGraph using the stored supports and values
+   */
+  TGraph asTGraph() const { return TGraph(m_size, m_supports.data(), m_values.data()); }
 
   /**
    * stream an SDC as two columns: pt value
@@ -164,7 +149,7 @@ public:
   explicit MultiSDC(const std::vector<SDC>& sdcs) : m_supports(sdcs[0].m_supports), m_size(sdcs[0].m_size) {
     m_values.reserve(sdcs.size());
     for (const auto& s : sdcs) {
-      if (!util::compare_supports(m_supports, s.m_supports)) continue;
+      if (!detail::compare_supports(m_supports, s.m_supports)) continue;
       m_values.emplace_back(s.m_values);
     }
   }
@@ -193,10 +178,36 @@ public:
                     InterpolationFunc interpFunc = util::interpolate) const {
     const auto i = util::find_bin(ptM, m_supports);
     if (i >= 0 && (unsigned)i < m_size) {
-      return interpFunc(ptM, m_supports[i], m_supports[i + 1], util::sum_sdcs(m_values, ldmes, i),
-                        util::sum_sdcs(m_values, ldmes, i + 1));
+      return interpFunc(ptM, m_supports[i], m_supports[i + 1], detail::sum_sdcs(m_values, ldmes, i),
+                        detail::sum_sdcs(m_values, ldmes, i + 1));
     }
     return std::nan("");
+  }
+
+  /**
+   * Get the cross-section described by the combination of SDCs as TGraph using
+   * a corresponding set of LDMEs.
+   */
+  TGraph asTGraph(const std::vector<double>& ldmes) const {
+    std::vector<double> values(m_size);
+    for (size_t i = 0; i < m_values.size(); ++i) {
+      values[i] = detail::sum_sdcs(m_values, ldmes, i);
+    }
+
+    return TGraph(m_size, m_supports.data(), values.data());
+  }
+
+  /**
+   * Get (a copy) of the SDC stored in this MultiSDC under index i
+   */
+  SDC operator[](size_t i) const {
+    if (i >= m_values.size()) {
+      std::cerr << "WARNING: Trying to get SDC at index " << i << " from MultiSDC that only has " << m_values.size()
+                << " stored SDCs" << std::endl;
+      return SDC({}, {}); // Fail harder?
+    }
+
+    return SDC(m_supports, m_values[i]);
   }
 
   /**
@@ -281,14 +292,14 @@ SDC scalar_op(const T val, const SDC& sdc, BinaryValueOp&& binOP) {
 
   auto values = sdc.m_values;
   for (auto& v : values)
-    binOP(val, v);
+    v = binOP(val, v);
 
   return SDC(sdc.m_supports, std::move(values));
 }
 
 template <typename BinaryValueOP>
 SDC binary_op(const SDC& lhs, const SDC& rhs, BinaryValueOP&& binOP) {
-  if (!util::compare_supports(lhs.m_supports, rhs.m_supports)) {
+  if (!detail::compare_supports(lhs.m_supports, rhs.m_supports)) {
     std::cerr << "ERROR: cannot combine SDCs" << std::endl;
     return SDC({}, {});
   }
@@ -311,16 +322,6 @@ enum class SDCType {
 };
 
 constexpr std::array<const char*, 3> SDCTypeNames = {"LP+NLO", "LO", "NLO"};
-
-namespace util {
-  /**
-   * Convert an enum (class) value to something that is usable as an array index
-   */
-  template <typename E>
-  constexpr auto to_index(E e) noexcept {
-    return static_cast<std::underlying_type_t<E>>(e);
-  }
-} // namespace util
 
 /**
  * Read an SDC (LP + NLO) from a file

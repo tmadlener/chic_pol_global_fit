@@ -13,37 +13,37 @@ constexpr static double ccbarMassSDCs = 3.0;
  * that represents all the intermediate states that contribute to direct psi
  * production and that can be evaluated using corresponding LDMEs.
  *
- * The order of contributions is:
+ * The order of contributions is (see also nrqcd_helpers.h):
  * - 3S1_1
  * - 3S1_8
  * - 3PJ_8
  * - 1S0_8
  */
-sdc::StateSDCs readPsiSDCs(std::string dataDir) {
+sdc::StateSDCs readPsiSDCs(std::string dataDir, sdc::SDCType sdcType=sdc::SDCType::LP_NLO) {
   // For further processing using the naming convention:
   // * S_U -> unpolarized SDC (== S_total)
   // * S_T -> transverse SDC (NOTE: only referring to either J_z = +1 or -1, not the combination)
   // * S_L -> longitudinal SDC
 
   // 3S1 singlet
-  const auto sdc_3S1_1_unpol = sdc::read_from_file(dataDir + "/3s1singletunpol.txt");
-  const auto sdc_3S1_1_trans = sdc::read_from_file(dataDir + "/3s1singlettransverse.txt");
+  const auto sdc_3S1_1_unpol = sdc::read_from_file(dataDir + "/3s1singletunpol.txt", sdcType);
+  const auto sdc_3S1_1_trans = sdc::read_from_file(dataDir + "/3s1singlettransverse.txt", sdcType);
   // It holds: S_U = S_L + 2 * S_T
   // --> S_L = S_U - 2 * S_T
   const auto sdc_3S1_1_long = sdc_3S1_1_unpol - 2 * sdc_3S1_1_trans;
 
   // 3S1 octet
-  const auto sdc_3S1_8_unpol = sdc::read_from_file(dataDir + "/3s1octetunpol.txt");
-  const auto sdc_3S1_8_long = sdc::read_from_file(dataDir + "/3s1octetlong.txt");
+  const auto sdc_3S1_8_unpol = sdc::read_from_file(dataDir + "/3s1octetunpol.txt", sdcType);
+  const auto sdc_3S1_8_long = sdc::read_from_file(dataDir + "/3s1octetlong.txt", sdcType);
   // Following the same logic as above:
   // --> S_T = 0.5 * (S_U - S_L)
 
   // 3PJ octet
-  const auto sdc_3PJ_8_unpol = sdc::read_from_file(dataDir + "/3pjoctetunpol.txt");
-  const auto sdc_3PJ_8_long = sdc::read_from_file(dataDir + "/3pjoctetlong.txt");
+  const auto sdc_3PJ_8_unpol = sdc::read_from_file(dataDir + "/3pjoctetunpol.txt", sdcType);
+  const auto sdc_3PJ_8_long = sdc::read_from_file(dataDir + "/3pjoctetlong.txt", sdcType);
 
   // 1S0 octet
-  const auto sdc_1S0_8 = sdc::read_from_file(dataDir + "/1s0octetunpol.txt");
+  const auto sdc_1S0_8 = sdc::read_from_file(dataDir + "/1s0octetunpol.txt", sdcType);
   // the octet is unpolarized, hence the three components 0, +1, -1 are equal
   // -> long = 1/3 * total
   const auto sdc_1S0_8_long = 1. / 3 * sdc_1S0_8;
@@ -64,11 +64,11 @@ sdc::StateSDCs readPsiSDCs(std::string dataDir) {
  * production as observable after their decay to a J/psi since that is what the
  * fitting code uses (and also what the chi polarization measurements provide).
  *
- * The order of the contributions is:
+ * The order of the contributions is (see als nrqcd_helpers.h):
  * - 3P1_1
  * - 3S1_8
  */
-sdc::StateSDCs readChic1SDCs(std::string dataDir) {
+sdc::StateSDCs readChic1SDCs(std::string dataDir, sdc::SDCType sdcType=sdc::SDCType::LP_NLO) {
   // For further processing using the naming convention:
   // * S_U -> unpolarized SDC (== total)
   // * S_0 -> SDC of J_z = 0
@@ -82,8 +82,8 @@ sdc::StateSDCs readChic1SDCs(std::string dataDir) {
   // found in PRD 83, 096001 (2011)
 
   // 3P1 singlet
-  const auto sdc_3P1_1_unpol = sdc::read_from_file(dataDir + "/3p1singletunpol.txt");
-  const auto sdc_3P1_1_h1 = sdc::read_from_file(dataDir + "/3p1singletpol1.txt");
+  const auto sdc_3P1_1_unpol = sdc::read_from_file(dataDir + "/3p1singletunpol.txt", sdcType);
+  const auto sdc_3P1_1_h1 = sdc::read_from_file(dataDir + "/3p1singletpol1.txt", sdcType);
   // We have S_total = S_U = S_0 + 2 * S_1
   // --> S_0 = S_U - 2 * S_1
   const auto sdc_3P1_1_h0 = sdc_3P1_1_unpol - 2 * sdc_3P1_1_h1;
@@ -93,8 +93,8 @@ sdc::StateSDCs readChic1SDCs(std::string dataDir) {
   const auto sdc_3P1_1_long = fL_3P1 * sdc_3P1_1_unpol;
 
   // 3S1 octet
-  const auto sdc_3S1_8_unpol = sdc::read_from_file(dataDir + "/3s1octetunpol.txt");
-  const auto sdc_3S1_8_long_psi = sdc::read_from_file(dataDir + "/3s1octetlong.txt");
+  const auto sdc_3S1_8_unpol = sdc::read_from_file(dataDir + "/3s1octetunpol.txt", sdcType);
+  const auto sdc_3S1_8_long_psi = sdc::read_from_file(dataDir + "/3s1octetlong.txt", sdcType);
   // For calculating the longitudinal fraction of the 3S1 contributions, we
   // first assume PSI production to arrive at lth_3S1_psi. Then we calculate the
   // transmission from any 3S1 state to a chic1 and use the resulting lambda to
@@ -123,11 +123,11 @@ sdc::StateSDCs readChic1SDCs(std::string dataDir) {
  * production as observable after their decay to a J/psi since that is what the
  * fitting code uses (and also what the chi polarization measurements provide).
  *
- * The order of the contributions is:
+ * The order of the contributions is (see als nrqcd_helpers.h):
  * - 3P2_1
  * - 3S1_8
  */
-sdc::StateSDCs readChic2SDCs(std::string dataDir) {
+sdc::StateSDCs readChic2SDCs(std::string dataDir, sdc::SDCType sdcType=sdc::SDCType::LP_NLO) {
   // For further processing using the naming convention:
   // * S_U -> unpolarized SDC (== total)
   // * S_0 -> SDC of J_z = 0
@@ -139,9 +139,9 @@ sdc::StateSDCs readChic2SDCs(std::string dataDir) {
   // there. Here only the different formulas are stated where necessary
 
   // 3P2 octet
-  const auto sdc_3P2_1_unpol = sdc::read_from_file(dataDir + "/3p2singletunpol.txt");
-  const auto sdc_3P2_1_h1 = sdc::read_from_file(dataDir + "/3p2singletpol1.txt");
-  const auto sdc_3P2_1_h2 = sdc::read_from_file(dataDir + "/3p2singletpol2.txt");
+  const auto sdc_3P2_1_unpol = sdc::read_from_file(dataDir + "/3p2singletunpol.txt", sdcType);
+  const auto sdc_3P2_1_h1 = sdc::read_from_file(dataDir + "/3p2singletpol1.txt", sdcType);
+  const auto sdc_3P2_1_h2 = sdc::read_from_file(dataDir + "/3p2singletpol2.txt", sdcType);
   // We have S_total = S_U = S_0 + 2 * S_1 + 2 * S_2
   // --> S0 = S_U - 2 * (S_1 + S_2)
   const auto sdc_3P2_1_h0 = sdc_3P2_1_unpol - 2 * (sdc_3P2_1_h1 + sdc_3P2_1_h2);
@@ -152,8 +152,8 @@ sdc::StateSDCs readChic2SDCs(std::string dataDir) {
   const auto sdc_3P2_1_long = fL_3P2 * sdc_3P2_1_unpol;
 
   // 3S1 octet
-  const auto sdc_3S1_8_unpol = sdc::read_from_file(dataDir + "/3s1octetunpol.txt");
-  const auto sdc_3S1_8_long_psi = sdc::read_from_file(dataDir + "/3s1octetlong.txt");
+  const auto sdc_3S1_8_unpol = sdc::read_from_file(dataDir + "/3s1octetunpol.txt", sdcType);
+  const auto sdc_3S1_8_long_psi = sdc::read_from_file(dataDir + "/3s1octetlong.txt", sdcType);
   // See above for reasoning
   const auto fL_3S1_psi = sdc_3S1_8_long_psi / sdc_3S1_8_unpol;
   const auto lth_3S1_psi = (1 - 3 * fL_3S1_psi) / (1 + fL_3S1_psi);
