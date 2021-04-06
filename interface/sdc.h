@@ -99,6 +99,28 @@ public:
   TGraph asTGraph() const { return TGraph(m_size, m_supports.data(), m_values.data()); }
 
   /**
+   * Get the stored SDC as TGraphs where all negative values have their signs
+   * flipped to allow them to be plotted on log-scale. The first graph contains
+   * all originally positive values, the second one all originally negative
+   * values. Mainly for debugging and easy plotting in python
+   */
+  std::vector<TGraph> asAlwaysPositiveGraphs() const {
+    std::vector<double> posVals, negVals, posSupp, negSupp;
+    for (size_t i = 0; i < m_size; ++i) {
+      if (m_values[i] > 0) {
+        posVals.push_back(m_values[i]);
+        posSupp.push_back(m_supports[i]);
+      } else {
+        negVals.push_back(std::abs(m_values[i]));
+        negSupp.push_back(m_supports[i]);
+      }
+    }
+
+    return {TGraph(posSupp.size(), posSupp.data(), posVals.data()),
+            TGraph(negSupp.size(), negSupp.data(), negVals.data())};
+  }
+
+  /**
    * stream an SDC as two columns: pt value
    */
   friend std::ostream& operator<<(std::ostream& os, const SDC& sdc);
