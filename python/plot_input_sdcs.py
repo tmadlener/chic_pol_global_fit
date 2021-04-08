@@ -4,6 +4,7 @@ import os
 import sys
 sys.path.append(os.path.expandvars('${CHIB_CHIC_POLFW_DIR}/python'))
 import glob
+from copy import deepcopy
 
 THIS_DIR = os.path.dirname(os.path.realpath(__file__))
 
@@ -14,9 +15,13 @@ r.gROOT.SetBatch()
 # ROOT can't figure out the scalar_op template implementation yet to be able to
 # directly do this in python. So easiest solution: Simply define the
 # functionality inside a function that we can then call from python
-LTH_FROM_SDC = r'''
+AUXILIARY_CPP_FUNCS = r'''
 sdc::SDC lth_from_flong(const sdc::SDC& fLong) {
   return (1 - 3 * fLong) / (1 + fLong);
+}
+
+sdc::SDC scale_sdc(double factor, sdc::SDC& sdc) {
+  return factor * sdc;
 }
 '''
 
@@ -24,9 +29,9 @@ sdc::SDC lth_from_flong(const sdc::SDC& fLong) {
 r.gInterpreter.AddIncludePath(f'{THIS_DIR}/../interface')
 r.gInterpreter.LoadFile(f'{THIS_DIR}/../src/read_sdcs.h')
 r.gInterpreter.LoadFile(f'{THIS_DIR}/../interface/nrqcd_helpers.h')
-r.gInterpreter.LoadText(LTH_FROM_SDC)
+r.gInterpreter.LoadText(AUXILIARY_CPP_FUNCS)
 from ROOT import sdc
-from ROOT import readPsiSDCs, readChic1SDCs, readChic2SDCs, lth_from_flong
+from ROOT import readPsiSDCs, readChic1SDCs, readChic2SDCs, lth_from_flong, scale_sdc
 XRANGE = (1.5, 14.5) # Same as in PLB 773 (2017) 476
 
 # Load plotting helper
@@ -34,15 +39,34 @@ from utils.plot_helpers import mkplot, default_attributes, setup_legend
 from utils.misc_helpers import cond_mkdir
 from utils.setup_plot_style import set_basic_style
 
+# Consistent attributes for plots involving multiple states
 ATTRS = {
-    '3S1_1': [default_attributes()[0]],
-    '3S1_8': [default_attributes()[1]],
-    '3PJ_8': [default_attributes()[2]],
-    '1S0_8': [default_attributes()[3]],
-    '3P1_1': [default_attributes()[4]],
-    '3P2_1': [default_attributes()[4]],
+    '3S1_1': [default_attributes(size=0.5)[0]],
+    '3S1_8': [default_attributes(size=0.5)[1]],
+    '3PJ_8': [default_attributes(size=0.5)[2]],
+    '1S0_8': [default_attributes(size=0.5)[3]],
+    '3P1_1': [default_attributes(size=0.5)[4]],
+    '3P2_1': [default_attributes(size=0.5)[4]],
 }
 
+# Scale factors for comparability with the Shao SDCs from PLB 773 (2017) 476
+RAP_SCALE = 1 / 2.4 * 1.5
+SCALE_FACTORS = {
+    '3S1_1': RAP_SCALE * 6,
+    '3S1_8': RAP_SCALE,
+    '3PJ_8': RAP_SCALE * 1.5**2,
+    '1S0_8': RAP_SCALE,
+    '3P1_1': RAP_SCALE * 6 * 1.5**2,
+    '3P2_1': RAP_SCALE * 6 * 1.5**2,
+}
+
+# Attributes for plotting comparison plots of total and longitudinal SDCs
+ATTRS_LT = [
+    deepcopy(default_attributes(size=0.5)[0]),
+    deepcopy(default_attributes(size=0.5)[1]),
+    default_attributes(size=0.5, open_markers=False)[0],
+    default_attributes(size=0.5, open_markers=False)[1],
+]
 
 def get_order(order):
     """Translate the string into the enum from c++"""
@@ -92,7 +116,9 @@ def _plot_state_sdcs(sdcdir, order, outdir, base_name, state_enum, states, read_
 
     def _plot_total_sdc(state, **kwargs):
         index = getattr(state_enum, f's{state}')
-        graphs = [g for g in sdcs.tot[index].asAlwaysPositiveGraphs() if g.GetN() > 0]
+        sdc_tot = sdcs.tot[index]
+        sdc_tot = scale_sdc(SCALE_FACTORS[state], sdc_tot)
+        graphs = [g for g in sdc_tot.asAlwaysPositiveGraphs() if g.GetN() > 0]
         can = mkplot(graphs[0], attr=ATTRS[state], legEntries=[state], legOpt='P', **kwargs)
         if len(graphs) > 1:
             can = mkplot(graphs[1], can=can, drawOpt=kwargs.get('drawOpt', 'P') + 'same',
@@ -102,7 +128,7 @@ def _plot_state_sdcs(sdcdir, order, outdir, base_name, state_enum, states, read_
     leg = setup_legend(0.75, 0.75, 0.92, 0.91)
     can = _plot_total_sdc(states[0], drawOpt='P', leg=leg,
                            xRange=XRANGE, xLabel='p_{T}/M',
-                           logy=True, yLabel='total SDCs', yRange=[1e-8, 0.5e5])
+                           logy=True, yLabel='total SDCs', yRange=[2e-2, 0.5e5])
 
     for state in states[1:]:
         can = _plot_total_sdc(state, drawOpt='P same', leg=leg, can=can)
@@ -124,6 +150,24 @@ def _plot_state_sdcs(sdcdir, order, outdir, base_name, state_enum, states, read_
         can = _plot_lth(state, drawOpt='P same', leg=leg, can=can)
 
     can.SaveAs(f'{outdir}/{base_name}_lth_SDCs_{get_order_str(order)}.pdf')
+
+    def _plot_tot_long_signs(state):
+        index = getattr(state_enum, f's{state}')
+        sdc_long, sdc_tot = sdcs.lng[index], sdcs.tot[index]
+        leg = setup_legend(0.75, 0.8, 0.93, 0.94)
+        can = mkplot([g for g in sdc_tot.asAlwaysPositiveGraphs() if g.GetN() > 0],
+                     drawOpt='P', logy=True, attr=ATTRS_LT[:2],
+                     xRange=XRANGE, xLabel='p_{T}/M',
+                     legOpt='P', leg=leg, legEntries=('tot +', 'tot -'),
+                     ydscale=0.1, yLabel=f'{state} SDCs')
+
+        return mkplot([g for g in sdc_long.asAlwaysPositiveGraphs() if g.GetN() > 0],
+                      can=can, drawOpt='P same', attr=ATTRS_LT[2:],
+                      legOpt='P', leg=leg, legEntries=('long +', 'long -'))
+
+    for state in states:
+        can = _plot_tot_long_signs(state)
+        can.SaveAs(f'{outdir}/{base_name}_tot_long_SDCs_{state}_{get_order_str(order)}.pdf')
 
 
 def plot_psi_sdcs(sdcdir, order, outdir):
