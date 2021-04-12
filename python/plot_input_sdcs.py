@@ -119,19 +119,19 @@ def _plot_state_sdcs(sdcdir, order, outdir, base_name, state_enum, states, read_
         sdc_tot = sdcs.tot[index]
         sdc_tot = scale_sdc(SCALE_FACTORS[state], sdc_tot)
         graphs = [g for g in sdc_tot.asAlwaysPositiveGraphs() if g.GetN() > 0]
-        can = mkplot(graphs[0], attr=ATTRS[state], legEntries=[state], legOpt='P', **kwargs)
+        can = mkplot(graphs[0], attr=ATTRS[state], legEntries=[state], legOpt='L', **kwargs)
         if len(graphs) > 1:
-            can = mkplot(graphs[1], can=can, drawOpt=kwargs.get('drawOpt', 'P') + 'same',
+            can = mkplot(graphs[1], can=can, drawOpt=kwargs.get('drawOpt', 'C') + 'same',
                          attr=ATTRS[state])
         return can
 
     leg = setup_legend(0.75, 0.75, 0.92, 0.91)
-    can = _plot_total_sdc(states[0], drawOpt='P', leg=leg,
+    can = _plot_total_sdc(states[0], drawOpt='C', leg=leg,
                            xRange=XRANGE, xLabel='p_{T}/M',
                            logy=True, yLabel='total SDCs', yRange=[2e-2, 0.5e5])
 
     for state in states[1:]:
-        can = _plot_total_sdc(state, drawOpt='P same', leg=leg, can=can)
+        can = _plot_total_sdc(state, drawOpt='C same', leg=leg, can=can)
 
     can.SaveAs(f'{outdir}/{base_name}_total_SDCs_{get_order_str(order)}.pdf')
 
@@ -140,14 +140,14 @@ def _plot_state_sdcs(sdcdir, order, outdir, base_name, state_enum, states, read_
         f_long = sdcs.lng[index] / sdcs.tot[index]
         lth = lth_from_flong(f_long)
         return mkplot(lth.asTGraph(),
-                      attr=ATTRS[state], legEntries=[state], legOpt='P', **kwargs)
+                      attr=ATTRS[state], legEntries=[state], legOpt='L', **kwargs)
 
-    leg.Clear()
-    can = _plot_lth(states[0], drawOpt='P', leg=leg,
+    leg = setup_legend(0.75, 0.8, 0.92, 0.94)
+    can = _plot_lth(states[0], drawOpt='C', leg=leg,
                     xRange=XRANGE, xLabel='p_{T}/M',
                     yRange=[-2, 2], yLabel='#lambda_{#vartheta}^{#psi}')
     for state in states[1:]:
-        can = _plot_lth(state, drawOpt='P same', leg=leg, can=can)
+        can = _plot_lth(state, drawOpt='C same', leg=leg, can=can)
 
     can.SaveAs(f'{outdir}/{base_name}_lth_SDCs_{get_order_str(order)}.pdf')
 
