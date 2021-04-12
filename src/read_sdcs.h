@@ -138,7 +138,7 @@ sdc::StateSDCs readChic2SDCs(std::string dataDir, sdc::SDCType sdcType=sdc::SDCT
   // (with different formulas) as the chic1 and the general approach is detailed
   // there. Here only the different formulas are stated where necessary
 
-  // 3P2 octet
+  // 3P2 singlet
   const auto sdc_3P2_1_unpol = sdc::read_from_file(dataDir + "/3p2singletunpol.txt", sdcType);
   const auto sdc_3P2_1_h1 = sdc::read_from_file(dataDir + "/3p2singletpol1.txt", sdcType);
   const auto sdc_3P2_1_h2 = sdc::read_from_file(dataDir + "/3p2singletpol2.txt", sdcType);
