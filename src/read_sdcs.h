@@ -102,8 +102,8 @@ sdc::StateSDCs readChic1SDCs(std::string dataDir, sdc::SDCType sdcType=sdc::SDCT
   // its decay to a J/psi)
   const auto fL_3S1_psi = sdc_3S1_8_long_psi / sdc_3S1_8_unpol;
   const auto lth_3S1_psi = (1 - 3 * fL_3S1_psi) / (1 + fL_3S1_psi);
-  // lth_chi = lth_psi / (3 + lth_psi)
-  const auto lth_3S1_chi = (lth_3S1_psi) / (3 + lth_3S1_psi);
+  // lth_chi = lth_psi / (4 + lth_psi)
+  const auto lth_3S1_chi = (lth_3S1_psi) / (4 + lth_3S1_psi);
   const auto fL_3S1 = (1 - lth_3S1_chi) / (3 + lth_3S1_chi);
   const auto sdc_3S1_8_long = fL_3S1 * sdc_3S1_8_unpol;
 
