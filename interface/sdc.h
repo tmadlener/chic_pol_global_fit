@@ -211,8 +211,8 @@ public:
    * a corresponding set of LDMEs.
    */
   TGraph asTGraph(const std::vector<double>& ldmes) const {
-    std::vector<double> values(m_size);
-    for (size_t i = 0; i < m_values.size(); ++i) {
+    std::vector<double> values(m_size, 0.0f);
+    for (size_t i = 0; i < m_size; ++i) {
       values[i] = detail::sum_sdcs(m_values, ldmes, i);
     }
 
