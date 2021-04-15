@@ -3,36 +3,15 @@
 
 #include "constants.h"
 #include "data_structures.h"
+#include "fit_parameters_nrqcd.h"
 #include "likelihood_helpers.h"
 #include "sdc.h"
 
 #include "Fit/FitResult.h"
 #include "Fit/ParameterSettings.h"
-#include "TTree.h"
 
 #include <stdexcept>
 #include <vector>
-
-// TODO: proper setup of fit parameters and compile time map
-#include "simple_compile_time_map.h"
-constexpr std::array<ParameterIndex, 1> PARAMETERS = {{{"foopar", 0}}};
-constexpr static int IPAR(const char* name) { return getParIdx(PARAMETERS, name); }
-constexpr static int NPARS(int max = 0, int index = 0) {
-  return (index == PARAMETERS.size()) ? max + 1 : // +1 due to 0-indexing
-      PARAMETERS[index].second > max ? NPARS(PARAMETERS[index].second, index + 1) : NPARS(max, index + 1);
-}
-
-template <size_t N = NPARS()>
-void parametersIndicesAsTTree(TTree* tree, const std::array<ParameterIndex, N>& parameters = PARAMETERS) {
-  std::array<int, N> indices;
-  int i = 0;
-  for (const auto& par : parameters) {
-    indices[i] = par.second;
-    tree->Branch(par.first, &indices[i]);
-    i++;
-  }
-  tree->Fill();
-}
 
 // ----------------------------------------- end params stuff
 
@@ -166,6 +145,36 @@ private:
 
 double GlobalLikelihoodNRQCD::operator()(const double* p) const {
   double loglike = 0;
+
+  // pulling the different parameters out of the p pointer here to guarantee,
+  // that the call to IPAR is evaluated at compile time
+  const double L_CMS = p[IPAR("L_CMS")];
+  const double L_ATLAS = p[IPAR("L_ATLAS")];
+  const double br_psip_mm = p[IPAR("br_psip_mm")];
+  const double br_psip_dp = p[IPAR("br_psip_dp")];
+  const double br_jpsi_mm = p[IPAR("br_jpsi_mm")];
+
+  // parameters
+  // chic ldmes
+  const auto l_3S1_8_c1 = p[IPAR("l_3S1_8_c0")] * 3;
+  const auto l_3S1_8_c2 = p[IPAR("l_3S1_8_c0")] * 5;
+  const auto l_3PJ_8_c1 = p[IPAR("l_3PJ_8_c0")] * 3;
+  const auto l_3PJ_8_c2 = p[IPAR("l_3PJ_8_c0")] * 5;
+
+  // jpsi and psip ldmes
+  const auto l_3S1_1_jpsi = p[IPAR("l_3S1_1_jpsi")];
+  const auto l_3S1_1_psip = p[IPAR("l_3S1_1_psip")];
+
+  // octets
+  const auto l_1S0_8_jpsi = p[IPAR("l_1S0_8_jpsi")];
+  const auto l_1S0_8_psip = p[IPAR("l_1S0_8_psip")];
+
+  // See fit_parameters_nrqcd.h for reasoning
+  const auto l_3PJ_8_jpsi = p[IPAR("l_r_3PJ_8_1S0_8_jpsi")] * l_1S0_8_jpsi;
+  const auto l_3S1_8_jpsi = p[IPAR("l_r_3S1_8_1S0_8_jpsi")] * l_1S0_8_jpsi;
+  const auto l_3PJ_8_psip = p[IPAR("l_rr_3PJ_8_1S0_8_psip_jpsi")] * p[IPAR("l_r_3PJ_8_1S0_8_jpsi")] * l_1S0_8_jpsi;
+  const auto l_3S1_8_psip = p[IPAR("l_rr_3S1_8_1S0_8_psip_jpsi")] * p[IPAR("l_r_3S1_8_1S0_8_jpsi")] * l_1S0_8_jpsi;
+
   // TODO: implementation of likelihood evaluation. Need fit param names first
 
   // nuissance parameters
