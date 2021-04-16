@@ -66,9 +66,51 @@ GlobalLikelihoodNRQCD get_likelihood(std::string dataDir, std::string sdcDir,
   return GlobalLikelihoodNRQCD(std::move(data), std::move(psi_SDC), std::move(chic1_SDC), std::move(chic2_SDC));
 }
 
-void global_fit_nrqcd() {
+void printResult(const LikelihoodFitter& fitter, const GlobalLikelihoodNRQCD& llh) {
+  const double minChi2 = 2 * fitter.Result().MinFcnValue();
+  const int nData = llh.nDataPoints();
+  const int nPars = llh.nPars();
+  const int nNuiss = llh.nNuissParams();
+  // since in the likelihood the nuissance parameters are counted towards the
+  // total number of parameters, they have to be added to the data points to
+  // arrive at a 0 contribution for each nuissance parameter
+  const int ndf = nData + nNuiss - nPars;
+
+  std::ios_base::fmtflags fmtflags(std::cout.flags());
+
+  std::cout << "========================= Fit Results =========================\n"
+            << "Number of fitted data points: " << nData << "\n"
+            << "Total number of parameters: " << nPars << "\n"
+            << "Number of nuissance parameters: " << nNuiss << "\n"
+            << "Minimum chi2: " << minChi2 << "\n"
+            << " -> chi2 / ndf " << std::setprecision(4) << minChi2 << " / " << ndf
+            << " (p = " << TMath::Prob(minChi2, ndf) << ")\n"
+            << "===============================================================\n";
+
+  std::cout.flags(fmtflags);
+}
+
+void global_fit_nrqcd(const std::string& resultsFileName, const std::string& graphFileName) {
   auto likelihood = get_likelihood("./data", "../SDCs_Chung");
 
   LikelihoodFitter fitter;
   fitter.Fit(likelihood);
+  printResult(fitter, likelihood);
+
+  TFile* outFile = new TFile(resultsFileName.c_str(), "recreate");
+  TTree* resultTree = new TTree("fit_result", "fit result information");
+  fitter.storeFitResult(resultTree);
+  resultTree->Write();
+
+  auto* parIdxTree = likelihood.storeParameterIndices();
+  parIdxTree->Write();
+
+  outFile->Close();
+
+  TFile* graphFile = new TFile(graphFileName.c_str(), "recreate");
+  for (const auto& graph : likelihood.getDataGraphs(fitter.Result())) {
+    graph.Write();
+  }
+
+  graphFile->Close();
 }

@@ -82,6 +82,12 @@ public:
   }
 
   /**
+   * Get the data graphs after applying corrections (for the cross section
+   * measurements)
+   */
+  std::vector<TGraphAsymmErrors> getDataGraphs(const ROOT::Fit::FitResult& fitResult) const;
+
+  /**
    * Cross section models of the direct cross section as a function of pT/M
    */
   CSModel getPsi2SXSecModel(const double* p) const;
@@ -472,6 +478,108 @@ template <typename T>
 void GlobalLikelihoodNRQCD::addNuissanceParameter(const std::string& name, const T& par) {
   const auto index = IPAR(name.c_str());
   m_nuissParams.push_back({index, {par}});
+}
+
+std::vector<TGraphAsymmErrors> GlobalLikelihoodNRQCD::getDataGraphs(const ROOT::Fit::FitResult& fitResult) const {
+  const auto parValues = fitResult.Parameters();
+  std::vector<TGraphAsymmErrors> graphs;
+
+  const double L_CMS = parValues[IPAR("L_CMS")];
+  const double br_psip_mm = parValues[IPAR("br_psip_mm")];
+  const auto psi2SXSecModel = getPsi2SXSecModel(parValues.data());
+  const auto psi2SPolModel = getPsi2SPolModel(parValues.data());
+
+  Identity<double> id;
+
+  graphs.push_back(correctedCSGraph(m_psi2S_CMS_cs, {psi2SXSecModel}, {psi2SPolModel}, {id}, {1.0}, L_CMS * br_psip_mm,
+                                    M_PSI2S, "psi2S_CMS_cs"));
+
+  const double L_ATLAS = parValues[IPAR("L_ATLAS")];
+  const double br_psip_dp = parValues[IPAR("br_psip_dp")];
+  const double br_jpsi_mm = parValues[IPAR("br_jpsi_mm")];
+
+  graphs.push_back(correctedCSGraph(m_psi2S_ATLAS_cs, {psi2SXSecModel}, {psi2SPolModel}, {id}, {1.0},
+                                    L_ATLAS * br_psip_dp * br_jpsi_mm, M_PSI2S, "psi2S_ATLAS_cs"));
+
+  const double br_c1_jpsi = parValues[IPAR("br_c1_jpsi")];
+  const double br_psip_c1 = parValues[IPAR("br_psip_c1")];
+
+  const auto chi1XSecModel = getChi1XSecModel(parValues.data());
+  const auto chi1PolModel = getChi1PolModel(parValues.data());
+
+  const std::vector<CSModel> chi1CSModels = {chi1XSecModel, psi2SXSecModel};
+  const std::vector<PolModel> chi1PolModels = {chi1PolModel, psi2SPolModel};
+  const std::vector<PolFeedDownTrafo> chi1FDTrafos = {id, lambdaPsiToChi1};
+  const std::vector<double> chi1FDFracs = {1.0, B_PSIP_CHIC1[0] / br_psip_c1};
+
+  graphs.push_back(correctedCSGraph(m_chic1_ATLAS_cs, chi1CSModels, chi1PolModels, chi1FDTrafos, chi1FDFracs,
+                                    L_ATLAS * br_c1_jpsi * br_jpsi_mm, M_CHIC1, "chic1_ATLAS_cs"));
+
+  const double br_c2_jpsi = parValues[IPAR("br_c2_jpsi")];
+  const double br_psip_c2 = parValues[IPAR("br_psip_c2")];
+
+  const auto chi2XSecModel = getChi2XSecModel(parValues.data());
+  const auto chi2PolModel = getChi2PolModel(parValues.data());
+
+  const std::vector<CSModel> chi2CSModels = {chi2XSecModel, psi2SXSecModel};
+  const std::vector<PolModel> chi2PolModels = {chi2PolModel, psi2SPolModel};
+  const std::vector<PolFeedDownTrafo> chi2FDTrafos = {id, lambdaPsiToChi2};
+  const std::vector<double> chi2FDFracs = {1.0, B_PSIP_CHIC2[0] / br_psip_c2};
+
+  graphs.push_back(correctedCSGraph(m_chic2_ATLAS_cs, chi2CSModels, chi2PolModels, chi2FDTrafos, chi2FDFracs,
+                                    L_ATLAS * br_c2_jpsi * br_jpsi_mm, M_CHIC2, "chic2_ATLAS_cs"));
+  //
+  // chic ratios first have to compute the corrections individually
+
+  const auto chi1Corrections = getCorrectionFactors(m_chic_ratio_CMS_cs, chi1CSModels, chi1PolModels, chi1FDTrafos,
+                                                    chi1FDFracs, L_ATLAS * br_c1_jpsi * br_jpsi_mm, M_JPSI);
+
+  const auto chi2Corrections = getCorrectionFactors(m_chic_ratio_CMS_cs, chi2CSModels, chi2PolModels, chi2FDTrafos,
+                                                    chi2FDFracs, L_ATLAS * br_c2_jpsi * br_jpsi_mm, M_JPSI);
+
+  std::vector<double> ratioCorrections;
+  for (size_t i = 0; i < chi1Corrections.size(); ++i) {
+    ratioCorrections.push_back(chi2Corrections[i] / chi1Corrections[i]);
+  }
+
+  graphs.push_back(correctGraph(m_chic_ratio_CMS_cs, "chic_ratio_CMS_cs", ratioCorrections));
+
+  const double br_psip_jpsi = parValues[IPAR("br_psip_jpsi")];
+  const auto jpsiXSecModel = getJpsiXSecModel(parValues.data());
+  const auto jpsiPolModel = getJpsiPolModel(parValues.data());
+
+  const std::vector<CSModel> jpsiCSModels = {jpsiXSecModel,  chi1XSecModel,  chi2XSecModel,
+                                             psi2SXSecModel, psi2SXSecModel, psi2SXSecModel};
+  const std::vector<PolModel> jpsiPolModels = {jpsiPolModel,  chi1PolModel,  chi2PolModel,
+                                               psi2SPolModel, psi2SPolModel, psi2SPolModel};
+  const std::vector<PolFeedDownTrafo> jpsiFDTrafos = {id, id, id, id, lambdaPsiToChi1, lambdaPsiToChi2};
+  const std::vector<double> jpsiFDFracs = {1.0,
+                                           B_CHIC1_JPSI[0] / br_c1_jpsi,
+                                           B_CHIC2_JPSI[0] / br_c2_jpsi,
+                                           B_PSIP_JPSI[0] / br_psip_jpsi,
+                                           B_PSIP_CHIC1[0] * B_CHIC1_JPSI[0] / br_c1_jpsi / br_psip_c1,
+                                           B_PSIP_CHIC2[0] * B_CHIC2_JPSI[0] / br_c2_jpsi / br_psip_c2};
+
+  graphs.push_back(correctedCSGraph(m_jpsi_CMS_cs, jpsiCSModels, jpsiPolModels, jpsiFDTrafos, jpsiFDFracs,
+                                    L_CMS * br_jpsi_mm, M_JPSI, "jpsi_CMS_cs"));
+
+
+  // Polarizations
+  graphs.push_back(asTGraph(m_psi2S_CMS_pol));
+  graphs.back().SetName("psi2S_CMS_pol");
+
+  graphs.push_back(asTGraph(m_jpsi_CMS_pol));
+  graphs.back().SetName("jpsi_CMS_pol");
+
+  for (const auto& cthRatioMeas : m_chic_ratios_CMS_pol) {
+    graphs.push_back(asTGraph(cthRatioMeas.second));
+    std::stringstream gn;
+    const int after_dec = (cthRatioMeas.first.ptM - int(cthRatioMeas.first.ptM)) * 100;
+    gn << "chic_CMS_pol_ptM_" << int(cthRatioMeas.first.ptM) << "p" << after_dec;
+    graphs.back().SetName(gn.str().c_str());
+  }
+
+  return graphs;
 }
 
 #endif
