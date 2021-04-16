@@ -46,7 +46,6 @@ void storeAllContributions(TFile* file, const sdc::StateSDCs& sdcs, const std::a
 GlobalLikelihoodNRQCD get_likelihood(std::string dataDir, std::string sdcDir,
                                      sdc::SDCType sdcType = sdc::SDCType::LP_NLO) {
   const auto data = read_all_data(dataDir, 2); // pT/M >= 2
-  // TODO: read sdcs and construct likelihood proper with it
   const auto psi_SDC = readPsiSDCs(sdcDir, sdcType);
   const auto chic1_SDC = readChic1SDCs(sdcDir, sdcType);
   const auto chic2_SDC = readChic2SDCs(sdcDir, sdcType);
@@ -70,6 +69,6 @@ GlobalLikelihoodNRQCD get_likelihood(std::string dataDir, std::string sdcDir,
 void global_fit_nrqcd() {
   auto likelihood = get_likelihood("./data", "../SDCs_Chung");
 
-  // LikelihoodFitter fitter;
-  // fitter.Fit(likelihood);
+  LikelihoodFitter fitter;
+  fitter.Fit(likelihood);
 }

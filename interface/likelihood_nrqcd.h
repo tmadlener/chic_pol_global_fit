@@ -5,6 +5,9 @@
 #include "data_structures.h"
 #include "fit_parameters_nrqcd.h"
 #include "likelihood_helpers.h"
+#include "misc_util.h"
+#include "misc_utils.h"
+#include "nrqcd_helpers.h"
 #include "sdc.h"
 
 #include "Fit/FitResult.h"
@@ -81,17 +84,18 @@ public:
   /**
    * Cross section models of the direct cross section as a function of pT/M
    */
-  static CSModel getPsi2SXSecModel(const double* p);
-  static CSModel getChi1XSecModel(const double* p);
-  static CSModel getChi2XSecModel(const double* p);
-  static CSModel getJpsiXSecModel(const double* p);
+  CSModel getPsi2SXSecModel(const double* p) const;
+  CSModel getChi1XSecModel(const double* p) const;
+  CSModel getChi2XSecModel(const double* p) const;
+  CSModel getJpsiXSecModel(const double* p) const;
 
   /**
    * Polarization models of the directly produced states as a function of pT/M
    */
-  static PolModel getPsiPolModel(const double* p);
-  static PolModel getChi1PolModel(const double* p);
-  static PolModel getChi2PolModel(const double* p);
+  PolModel getPsi2SPolModel(const double* p) const;
+  PolModel getJpsiPolModel(const double* p) const;
+  PolModel getChi1PolModel(const double* p) const;
+  PolModel getChi2PolModel(const double* p) const;
 
 private:
   /**
@@ -154,28 +158,107 @@ double GlobalLikelihoodNRQCD::operator()(const double* p) const {
   const double br_psip_dp = p[IPAR("br_psip_dp")];
   const double br_jpsi_mm = p[IPAR("br_jpsi_mm")];
 
-  // parameters
-  // chic ldmes
-  const auto l_3S1_8_c1 = p[IPAR("l_3S1_8_c0")] * 3;
-  const auto l_3S1_8_c2 = p[IPAR("l_3S1_8_c0")] * 5;
-  const auto l_3PJ_8_c1 = p[IPAR("l_3PJ_8_c0")] * 3;
-  const auto l_3PJ_8_c2 = p[IPAR("l_3PJ_8_c0")] * 5;
+  const auto psi2SXSecModel = getPsi2SXSecModel(p);
+  const auto psi2SPolModel = getPsi2SPolModel(p);
 
-  // jpsi and psip ldmes
-  const auto l_3S1_1_jpsi = p[IPAR("l_3S1_1_jpsi")];
-  const auto l_3S1_1_psip = p[IPAR("l_3S1_1_psip")];
+  const Identity<double> id;
 
-  // octets
-  const auto l_1S0_8_jpsi = p[IPAR("l_1S0_8_jpsi")];
-  const auto l_1S0_8_psip = p[IPAR("l_1S0_8_psip")];
+  // psi(2S) CMS
+  loglike +=
+      loglikeCrossSection(m_psi2S_CMS_cs, {psi2SXSecModel}, {psi2SPolModel}, {id}, {1.0}, L_CMS * br_psip_mm, M_PSI2S);
 
-  // See fit_parameters_nrqcd.h for reasoning
-  const auto l_3PJ_8_jpsi = p[IPAR("l_r_3PJ_8_1S0_8_jpsi")] * l_1S0_8_jpsi;
-  const auto l_3S1_8_jpsi = p[IPAR("l_r_3S1_8_1S0_8_jpsi")] * l_1S0_8_jpsi;
-  const auto l_3PJ_8_psip = p[IPAR("l_rr_3PJ_8_1S0_8_psip_jpsi")] * p[IPAR("l_r_3PJ_8_1S0_8_jpsi")] * l_1S0_8_jpsi;
-  const auto l_3S1_8_psip = p[IPAR("l_rr_3S1_8_1S0_8_psip_jpsi")] * p[IPAR("l_r_3S1_8_1S0_8_jpsi")] * l_1S0_8_jpsi;
+  // psi(2S) ATLAS
+  loglike += loglikeCrossSection(m_psi2S_ATLAS_cs, {psi2SXSecModel}, {psi2SPolModel}, {id}, {1.0},
+                                 L_ATLAS * br_psip_dp * br_jpsi_mm, M_PSI2S);
 
-  // TODO: implementation of likelihood evaluation. Need fit param names first
+  const double br_c2_jpsi = p[IPAR("br_c2_jpsi")];
+  const double br_psip_c2 = p[IPAR("br_psip_c2")];
+
+  const auto chic2XSecModel = getChi2XSecModel(p);
+  const auto chi2PolModel = getChi2PolModel(p);
+
+  const std::vector<CSModel> chi2CSModels = {chic2XSecModel, psi2SXSecModel};
+  const std::vector<PolModel> chi2PolModels = {chi2PolModel, psi2SPolModel};
+  const std::vector<PolFeedDownTrafo> chi2FDTrafos = {id, lambdaPsiToChi2};
+  const std::vector<double> chi2FDFracs = {1.0, B_PSIP_CHIC2[0] / br_psip_c2};
+
+  // chic2 ATLAS
+  loglike += loglikeCrossSection(m_chic2_ATLAS_cs, chi2CSModels, chi2PolModels, chi2FDTrafos, chi2FDFracs,
+                                 L_ATLAS * br_c2_jpsi * br_jpsi_mm, M_CHIC2);
+
+  const double br_c1_jpsi = p[IPAR("br_c1_jpsi")];
+  const double br_psip_c1 = p[IPAR("br_psip_c1")];
+  const auto chic1XSecModel = getChi1XSecModel(p);
+  const auto chi1PolModel = getChi1PolModel(p);
+
+  const std::vector<CSModel> chi1CSModels = {chic1XSecModel, psi2SXSecModel};
+  const std::vector<PolModel> chi1PolModels = {chi1PolModel, psi2SPolModel};
+  const std::vector<PolFeedDownTrafo> chi1FDTrafos = {id, lambdaPsiToChi1};
+  const std::vector<double> chi1FDFracs = {1.0, B_PSIP_CHIC1[0] / br_psip_c1};
+
+  // chic1 ATLAS
+  loglike += loglikeCrossSection(m_chic1_ATLAS_cs, chi1CSModels, chi1PolModels, chi1FDTrafos, chi1FDFracs,
+                                 L_ATLAS * br_c1_jpsi * br_jpsi_mm, M_CHIC1);
+
+  const double br_psip_jpsi = p[IPAR("br_psip_jpsi")];
+
+  const auto jpsiXSecModel = getJpsiXSecModel(p);
+  const auto jpsiPolModel = getJpsiPolModel(p);
+
+  // TODO: make it possible to compose one function that reflects the chi
+  // polarization dependening on pt/M. Currently, we it is necessary to be very
+  // general here and list all the contributions to the j/psi individually,
+  // considering double feed-down accordingly. NOTE: The lambdas are only
+  // affected in the feed-down decay from psi(2S) -> chi
+
+  const std::vector<CSModel> jpsiCSModels = {jpsiXSecModel,  chic1XSecModel, chic2XSecModel,
+                                             psi2SXSecModel, psi2SXSecModel, psi2SXSecModel};
+  const std::vector<PolModel> jpsiPolModels = {jpsiPolModel,  chi1PolModel,  chi2PolModel,
+                                               psi2SPolModel, psi2SPolModel, psi2SPolModel};
+  const std::vector<PolFeedDownTrafo> jpsiFDTrafos = {id, id, id, id, lambdaPsiToChi1, lambdaPsiToChi2};
+
+  const std::vector<double> jpsiFDFracs = {1.0,
+                                           B_CHIC1_JPSI[0] / br_c1_jpsi,
+                                           B_CHIC2_JPSI[0] / br_c2_jpsi,
+                                           B_PSIP_JPSI[0] / br_psip_jpsi,
+                                           B_PSIP_CHIC1[0] * B_CHIC1_JPSI[0] / br_c1_jpsi / br_psip_c1,
+                                           B_PSIP_CHIC2[0] * B_CHIC2_JPSI[0] / br_c2_jpsi / br_psip_c2};
+
+  // jpsi CMS
+  loglike += loglikeCrossSection(m_jpsi_CMS_cs, jpsiCSModels, jpsiPolModels, jpsiFDTrafos, jpsiFDFracs,
+                                 L_CMS * br_jpsi_mm, M_JPSI);
+
+  // chic ratio CMS
+  loglike +=
+      loglikeCrossSectionRatio(m_chic_ratio_CMS_cs, chi2CSModels, chi1CSModels, chi2PolModels, chi1PolModels,
+                               chi2FDTrafos, chi1FDTrafos, chi2FDFracs, chi1FDFracs, br_psip_c2 / br_psip_c1, M_JPSI);
+
+  // ======================= POLARIZATONS ================================
+
+  // psi(2S) polarization CMS
+  loglike += loglikePolarization(m_psi2S_CMS_pol, {psi2SXSecModel}, {psi2SPolModel}, {id}, {1.0}, M_PSI2S);
+
+  // jpsi polarization CMS
+  loglike += loglikePolarization(m_jpsi_CMS_pol, jpsiCSModels, jpsiPolModels, jpsiFDTrafos, jpsiFDFracs, M_JPSI);
+
+  // chic2 / chic1 costh ratios
+  const std::array<double, 3> normalizations = {p[IPAR("norm_costh_1")], p[IPAR("norm_costh_2")],
+                                                p[IPAR("norm_costh_3")]};
+
+  for (size_t iPtBin = 0; iPtBin < normalizations.size(); ++iPtBin) {
+    const auto& ratioData = m_chic_ratios_CMS_pol[iPtBin];
+    const auto [xs1, lambda1] =
+        crossSecAndLambda(ratioData.first, 0.5 / M_JPSI, chi1CSModels, chi1PolModels, chi1FDTrafos, chi1FDFracs);
+
+    const auto [xs2, lambda2] =
+        crossSecAndLambda(ratioData.first, 0.5 / M_JPSI, chi2CSModels, chi2PolModels, chi2FDTrafos, chi2FDFracs);
+
+    CosthRatioModel costhRatioModel = [lambda2, lambda1, normalizations, iPtBin](double costh) {
+      return costhRatio(costh, lambda2, lambda1, normalizations[iPtBin]);
+    };
+
+    loglike += loglikeCosthRatio(ratioData.second, costhRatioModel);
+  }
 
   // nuissance parameters
   for (const auto& nuissPar : m_nuissParams) {
@@ -183,6 +266,134 @@ double GlobalLikelihoodNRQCD::operator()(const double* p) const {
   }
 
   return -loglike;
+}
+
+CSModel GlobalLikelihoodNRQCD::getPsi2SXSecModel(const double* p) const {
+  const auto l_3S1_1_psip = p[IPAR("l_3S1_1_psip")];
+  const auto l_1S0_8_psip = p[IPAR("l_1S0_8_psip")];
+  const auto l_3PJ_8_psip = p[IPAR("l_rr_3PJ_8_1S0_8_psip_jpsi")] * p[IPAR("l_r_3PJ_8_1S0_8_jpsi")] * l_1S0_8_psip;
+  const auto l_3S1_8_psip = p[IPAR("l_rr_3S1_8_1S0_8_psip_jpsi")] * p[IPAR("l_r_3S1_8_1S0_8_jpsi")] * l_1S0_8_psip;
+
+  return [=](double ptm) {
+    std::vector<double> ldmes(4, 0);
+    ldmes[util::to_index(PsiSDCs::s3S1_1)] = l_3S1_1_psip;
+    ldmes[util::to_index(PsiSDCs::s3S1_8)] = l_3S1_8_psip;
+    ldmes[util::to_index(PsiSDCs::s3PJ_8)] = l_3PJ_8_psip;
+    ldmes[util::to_index(PsiSDCs::s1S0_8)] = l_1S0_8_psip;
+
+    return m_SDC_psi.tot(ptm, ldmes);
+  };
+}
+
+CSModel GlobalLikelihoodNRQCD::getJpsiXSecModel(const double* p) const {
+  const auto l_3S1_1_jpsi = p[IPAR("l_3S1_1_jpsi")];
+  const auto l_1S0_8_jpsi = p[IPAR("l_1S0_8_jpsi")];
+  const auto l_3PJ_8_jpsi = p[IPAR("l_r_3PJ_8_1S0_8_jpsi")] * l_1S0_8_jpsi;
+  const auto l_3S1_8_jpsi = p[IPAR("l_r_3S1_8_1S0_8_jpsi")] * l_1S0_8_jpsi;
+
+  return [=](double ptm) {
+    std::vector<double> ldmes(4, 0);
+    ldmes[util::to_index(PsiSDCs::s3S1_1)] = l_3S1_1_jpsi;
+    ldmes[util::to_index(PsiSDCs::s3S1_8)] = l_3S1_8_jpsi;
+    ldmes[util::to_index(PsiSDCs::s3PJ_8)] = l_3PJ_8_jpsi;
+    ldmes[util::to_index(PsiSDCs::s1S0_8)] = l_1S0_8_jpsi;
+
+    return m_SDC_psi.tot(ptm, ldmes);
+  };
+}
+
+CSModel GlobalLikelihoodNRQCD::getChi1XSecModel(const double* p) const {
+  const auto l_3S1_8_c1 = p[IPAR("l_3S1_8_c0")] * 3;
+  const auto l_3P1_1_c1 = p[IPAR("l_3P0_1_c0")] * 3;
+
+  return [=](double ptm) {
+    std::vector<double> ldmes(2, 0);
+    ldmes[util::to_index(Chic1SDCs::s3P1_1)] = l_3P1_1_c1;
+    ldmes[util::to_index(Chic1SDCs::s3S1_8)] = l_3S1_8_c1;
+
+    return m_SDC_chic1.tot(ptm, ldmes);
+  };
+}
+
+CSModel GlobalLikelihoodNRQCD::getChi2XSecModel(const double* p) const {
+  const auto l_3S1_8_c2 = p[IPAR("l_3S1_8_c0")] * 5;
+  const auto l_3P2_1_c2 = p[IPAR("l_3P0_1_c0")] * 5;
+
+  return [=](double ptm) {
+    std::vector<double> ldmes(2, 0);
+    ldmes[util::to_index(Chic2SDCs::s3P2_1)] = l_3P2_1_c2;
+    ldmes[util::to_index(Chic2SDCs::s3S1_8)] = l_3S1_8_c2;
+
+    return m_SDC_chic2.tot(ptm, ldmes);
+  };
+}
+
+PolModel GlobalLikelihoodNRQCD::getChi1PolModel(const double* p) const {
+  const auto l_3S1_8_c1 = p[IPAR("l_3S1_8_c0")] * 3;
+  const auto l_3P1_1_c1 = p[IPAR("l_3P0_1_c0")] * 3;
+
+  return [=](double ptm) {
+    std::vector<double> ldmes(2, 0);
+    ldmes[util::to_index(Chic1SDCs::s3P1_1)] = l_3P1_1_c1;
+    ldmes[util::to_index(Chic1SDCs::s3S1_8)] = l_3S1_8_c1;
+
+    const auto total = m_SDC_chic1.tot(ptm, ldmes);
+    const auto longitudinal = m_SDC_chic1.lng(ptm, ldmes);
+    return lambdath(longitudinal / total);
+  };
+}
+
+PolModel GlobalLikelihoodNRQCD::getChi2PolModel(const double* p) const {
+  const auto l_3S1_8_c2 = p[IPAR("l_3S1_8_c0")] * 5;
+  const auto l_3P2_1_c2 = p[IPAR("l_3P0_1_c0")] * 5;
+
+  return [=](double ptm) {
+    std::vector<double> ldmes(2, 0);
+    ldmes[util::to_index(Chic2SDCs::s3P2_1)] = l_3P2_1_c2;
+    ldmes[util::to_index(Chic2SDCs::s3S1_8)] = l_3S1_8_c2;
+
+    const auto total = m_SDC_chic1.tot(ptm, ldmes);
+    const auto longitudinal = m_SDC_chic1.lng(ptm, ldmes);
+    return lambdath(longitudinal / total);
+  };
+}
+
+PolModel GlobalLikelihoodNRQCD::getPsi2SPolModel(const double* p) const {
+  const auto l_3S1_1_psip = p[IPAR("l_3S1_1_psip")];
+  const auto l_1S0_8_psip = p[IPAR("l_1S0_8_psip")];
+  const auto l_3PJ_8_psip = p[IPAR("l_rr_3PJ_8_1S0_8_psip_jpsi")] * p[IPAR("l_r_3PJ_8_1S0_8_jpsi")] * l_1S0_8_psip;
+  const auto l_3S1_8_psip = p[IPAR("l_rr_3S1_8_1S0_8_psip_jpsi")] * p[IPAR("l_r_3S1_8_1S0_8_jpsi")] * l_1S0_8_psip;
+
+  return [=](double ptm) {
+    std::vector<double> ldmes(4, 0);
+    ldmes[util::to_index(PsiSDCs::s3S1_1)] = l_3S1_1_psip;
+    ldmes[util::to_index(PsiSDCs::s3S1_8)] = l_3S1_8_psip;
+    ldmes[util::to_index(PsiSDCs::s3PJ_8)] = l_3PJ_8_psip;
+    ldmes[util::to_index(PsiSDCs::s1S0_8)] = l_1S0_8_psip;
+
+    const auto total = m_SDC_chic1.tot(ptm, ldmes);
+    const auto longitudinal = m_SDC_chic1.lng(ptm, ldmes);
+    return lambdath(longitudinal / total);
+  };
+}
+
+PolModel GlobalLikelihoodNRQCD::getJpsiPolModel(const double* p) const {
+  const auto l_3S1_1_jpsi = p[IPAR("l_3S1_1_jpsi")];
+  const auto l_1S0_8_jpsi = p[IPAR("l_1S0_8_jpsi")];
+  const auto l_3PJ_8_jpsi = p[IPAR("l_r_3PJ_8_1S0_8_jpsi")] * l_1S0_8_jpsi;
+  const auto l_3S1_8_jpsi = p[IPAR("l_r_3S1_8_1S0_8_jpsi")] * l_1S0_8_jpsi;
+
+  return [=](double ptm) {
+    std::vector<double> ldmes(4, 0);
+    ldmes[util::to_index(PsiSDCs::s3S1_1)] = l_3S1_1_jpsi;
+    ldmes[util::to_index(PsiSDCs::s3S1_8)] = l_3S1_8_jpsi;
+    ldmes[util::to_index(PsiSDCs::s3PJ_8)] = l_3PJ_8_jpsi;
+    ldmes[util::to_index(PsiSDCs::s1S0_8)] = l_1S0_8_jpsi;
+
+    const auto total = m_SDC_chic1.tot(ptm, ldmes);
+    const auto longitudinal = m_SDC_chic1.lng(ptm, ldmes);
+    return lambdath(longitudinal / total);
+  };
 }
 
 size_t GlobalLikelihoodNRQCD::nDataPoints() const {
@@ -211,7 +422,36 @@ void GlobalLikelihoodNRQCD::setupFit() {
 }
 
 void GlobalLikelihoodNRQCD::defineStartParams() {
-  // TODO: Once fit parameters have been defined
+  // TODO: Get reasonable start values
+  setParam("l_3S1_8_c0", 1, 1);
+  setParam("l_3P0_1_c0", 1, 1);
+
+  setParam("l_3S1_1_jpsi", 1, 1);
+  setParam("l_3S1_1_psip", 1, 1);
+
+  setParam("l_1S0_8_jpsi", 1, 1);
+  setParam("l_1S0_8_psip", 1, 1);
+
+  setParam("l_r_3PJ_8_1S0_8_jpsi", 1, 1);
+  setParam("l_r_3S1_8_1S0_8_jpsi", 1, 1);
+  setParam("l_rr_3PJ_8_1S0_8_psip_jpsi", 1, 0.1);
+  setParam("l_rr_3S1_8_1S0_8_psip_jpsi", 1, 0.1);
+
+  setParam("br_psip_dp", 1, 0.01);
+  setParam("br_psip_mm", 1, 0.01);
+  setParam("br_psip_c2", 1, 0.01);
+  setParam("br_psip_c1", 1, 0.01);
+  setParam("br_psip_jpsi", 1, 0.01);
+  setParam("br_c2_jpsi", 1, 0.01);
+  setParam("br_c1_jpsi", 1, 0.01);
+  setParam("br_jpsi_mm", 1, 0.01);
+
+  setParam("L_CMS", 1, 0.01);
+  setParam("L_ATLAS", 1, 0.01);
+
+  setParam("norm_costh_1", 0.45, 0.1);
+  setParam("norm_costh_2", 0.45, 0.1);
+  setParam("norm_costh_3", 0.45, 0.1);
 }
 
 void GlobalLikelihoodNRQCD::addNuissances() {
