@@ -35,9 +35,9 @@ B_CHIC1_JPSI = 34.3e-2
 
 # define colors for J/psi and psi(2S) polarization plot
 JPSI_COL = r.TColor.GetFreeColorIndex()
-TCOLOR_JPSI = r.TColor(JPSI_COL, 13./255, 154./255, 0)
+TCOLOR_JPSI = r.TColor(JPSI_COL, 13./255, 154./255, 0, "")
 PSI_COL = r.TColor.GetFreeColorIndex()
-TCOLOR_PSI = r.TColor(PSI_COL, 178./255, 33./255, 179./255)
+TCOLOR_PSI = r.TColor(PSI_COL, 178./255, 33./255, 179./255, "")
 
 
 def _pull_plot(graphs, model, **kwargs):
@@ -109,7 +109,7 @@ def psi2S_cs(gfile):
                  legEntries=leg_entries,
                  xRange=CS_RANGE, xLabel=PTM_LABEL, yLabel=CS_LABEL)
 
-    mkplot(gfile.Get('psi_cs_direct'), can=can, drawOpt='Lsame',
+    mkplot(gfile.Get('psip_cs_direct'), can=can, drawOpt='Lsame',
            leg=leg, legEntries=['best fit'], legOpt='L')
 
     return can
@@ -123,7 +123,7 @@ def psi2S_cs_pulls(gfile):
 
     graphs, leg_entries = _get_present(gfile, names, leg_entries)
 
-    model = gfile.Get('psi_cs_direct')
+    model = gfile.Get('psip_cs_direct')
 
     return _pull_plot(graphs, model, legPos=(0.2, 0.8, 0.4, 0.92), legOpt='P',
                       legEntries=leg_entries)
@@ -136,7 +136,7 @@ def psi_2S_rel_diff(gfile):
                              '#psi(2S) #rightarrow J/#psi #pi#pi ATLAS']
 
     graphs, leg_entries = _get_present(gfile, names, leg_entries)
-    model = gfile.Get('psi_cs_direct')
+    model = gfile.Get('psip_cs_direct')
 
     return _rel_diff_plot(graphs, model, legEntries=leg_entries, legOpt='PE',
                           legPos=(0.2, 0.2, 0.4, 0.32))
@@ -219,7 +219,7 @@ def psi_pol(gfile):
     leg = setup_legend(0.6, 0.2, 0.88, 0.36)
 
 
-    can = mkplot([gfile.Get(n) for n in ['psi_pol_direct', 'jpsi_pol_full']],
+    can = mkplot([gfile.Get(n) for n in ['psip_pol_direct', 'jpsi_pol_full']],
                  drawOpt='L', colors=[PSI_COL, JPSI_COL],
                  leg=leg, legEntries=['#psi(2S) model', 'J/#psi model'], legOpt='L',
                  xRange=[2, 30], xLabel=PTM_LABEL, yLabel=POL_LABEL, yRange=[-1, 1])
@@ -278,18 +278,18 @@ def combined_cs(gfile, only=None):
         attrs = [graph_attrs[g] for g in graph_attrs.keys() if only in g]
     else:
         graphs, _ = _get_present(gfile, graph_attrs.keys(), graph_attrs.keys())
-        attrs = graph_attrs.values()
+        attrs = list(graph_attrs.values())
 
     can = mkplot(graphs, attr=attrs,
                  drawOpt='PE', xRange=[2, 50], yRange=[1e-5, 30], logy=True, logx=True,
                  xLabel=PTM_LABEL, yLabel=CS_LABEL)
 
     if only is None:
-        mkplot([gfile.Get(f) for f in  ['psi_cs_direct', 'jpsi_cs_full', 'chic1_cs_full', 'chic2_cs_full']],
+        mkplot([gfile.Get(f) for f in  ['psip_cs_direct', 'jpsi_cs_full', 'chic1_cs_full', 'chic2_cs_full']],
                can=can, drawOpt='L same', attr=[{'color': 1, 'width': 1, 'line': 1}])
 
 
-    leg_graphs = [r.TGraph(1, np.array([10000]), np.array([10000])) for _ in range(5)]
+    leg_graphs = [r.TGraph(1, np.array([10000.]), np.array([10000.])) for _ in range(5)]
     mkplot(leg_graphs, can=can, drawOpt='P same', legPos=(0.2, 0.2, 0.4, 0.40),
            legEntries=['J/#psi', '#psi(2S) #rightarrow #mu#mu', '#psi(2S) #rightarrow J/#psi #pi#pi',
                        '#chi_{c1}', '#chi_{c2}'], legOpt='P',
