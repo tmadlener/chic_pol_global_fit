@@ -88,6 +88,12 @@ public:
   std::vector<TGraphAsymmErrors> getDataGraphs(const ROOT::Fit::FitResult& fitResult) const;
 
   /**
+   * Get the best fit models as a function of pT/M, respectively as a function
+   * of costh for the chic costh ratios
+   */
+  std::vector<TF1> getBestFitModels(const ROOT::Fit::FitResult& fitResult) const;
+
+  /**
    * Cross section models of the direct cross section as a function of pT/M
    */
   CSModel getPsi2SXSecModel(const double* p) const;
@@ -429,17 +435,17 @@ void GlobalLikelihoodNRQCD::setupFit() {
 
 void GlobalLikelihoodNRQCD::defineStartParams() {
   // TODO: Get reasonable start values
-  setParam("l_3S1_8_c0", 1, 1);
-  setParam("l_3P0_1_c0", 1, 1);
+  setParam("l_3S1_8_c0", 0.002, 1);
+  setParam("l_3P0_1_c0", 0.015, 1);
 
-  setParam("l_3S1_1_jpsi", 1, 1);
-  setParam("l_3S1_1_psip", 1, 1);
+  setParam("l_3S1_1_jpsi", 10, 1);   // TODO: fix these as nuisances to theory?
+  setParam("l_3S1_1_psip", 0.05, 1); // TODO: fix these as nuisances to theory?
 
-  setParam("l_1S0_8_jpsi", 1, 1);
-  setParam("l_1S0_8_psip", 1, 1);
+  setParam("l_1S0_8_jpsi", 1e-6, 0.1);
+  setParam("l_1S0_8_psip", 1e-6, 0.1);
 
-  setParam("l_r_3PJ_8_1S0_8_jpsi", 1, 1);
-  setParam("l_r_3S1_8_1S0_8_jpsi", 1, 1);
+  setParam("l_r_3PJ_8_1S0_8_jpsi", 30, 5);
+  setParam("l_r_3S1_8_1S0_8_jpsi", 30, 5);
   setParam("l_rr_3PJ_8_1S0_8_psip_jpsi", 1, 0.1);
   setParam("l_rr_3S1_8_1S0_8_psip_jpsi", 1, 0.1);
 
@@ -563,7 +569,6 @@ std::vector<TGraphAsymmErrors> GlobalLikelihoodNRQCD::getDataGraphs(const ROOT::
   graphs.push_back(correctedCSGraph(m_jpsi_CMS_cs, jpsiCSModels, jpsiPolModels, jpsiFDTrafos, jpsiFDFracs,
                                     L_CMS * br_jpsi_mm, M_JPSI, "jpsi_CMS_cs"));
 
-
   // Polarizations
   graphs.push_back(asTGraph(m_psi2S_CMS_pol));
   graphs.back().SetName("psi2S_CMS_pol");
@@ -580,6 +585,94 @@ std::vector<TGraphAsymmErrors> GlobalLikelihoodNRQCD::getDataGraphs(const ROOT::
   }
 
   return graphs;
+}
+
+std::vector<TF1> GlobalLikelihoodNRQCD::getBestFitModels(const ROOT::Fit::FitResult& fitResult) const {
+  const auto parValues = fitResult.Parameters();
+  std::vector<TF1> models;
+
+  const auto psi2SXSecModel = getPsi2SXSecModel(parValues.data());
+  const auto psi2SPolModel = getPsi2SPolModel(parValues.data());
+  models.push_back(modelAsTF1(psi2SXSecModel, "psip_cs_direct", 2, 40));
+  models.push_back(modelAsTF1(psi2SPolModel, "psip_pol_direct", 2, 40));
+
+  const auto chi1XSecModel = getChi1XSecModel(parValues.data());
+  const auto chi1PolModel = getChi1PolModel(parValues.data());
+  models.push_back(modelAsTF1(chi1XSecModel, "chic1_cs_direct", 2, 40));
+  models.push_back(modelAsTF1(chi1PolModel, "chic1_pol_direct", 2, 40));
+
+  const auto chi2XSecModel = getChi2XSecModel(parValues.data());
+  const auto chi2PolModel = getChi2PolModel(parValues.data());
+  models.push_back(modelAsTF1(chi2XSecModel, "chic2_cs_direct", 2, 40));
+  models.push_back(modelAsTF1(chi2PolModel, "chic2_pol_direct", 2, 40));
+
+  const auto jpsiXSecModel = getJpsiXSecModel(parValues.data());
+  const auto jpsiPolModel = getJpsiPolModel(parValues.data());
+
+  models.push_back(modelAsTF1(jpsiXSecModel, "jpsi_cs_direct", 2, 40));
+  models.push_back(modelAsTF1(psi2SPolModel, "jpsi_pol_direct", 2, 40));
+
+  const Identity<double> id;
+
+  const double br_psip_c1 = parValues[IPAR("br_psip_c1")];
+  const auto [chic1XSecFull, chic1PolFull] =
+      combineModels({chi1XSecModel, psi2SXSecModel}, {chi1PolModel, psi2SPolModel}, {id, lambdaPsiToChi1},
+                    {1.0, B_PSIP_CHIC1[0] / br_psip_c1});
+
+  models.push_back(modelAsTF1(chic1XSecFull, "chic1_cs_full", 2, 40));
+  models.push_back(modelAsTF1(chic1PolFull, "chic1_pol_full", 2, 40));
+
+  const double br_psip_c2 = parValues[IPAR("br_psip_c2")];
+  const auto [chic2XSecFull, chic2PolFull] =
+      combineModels({chi2XSecModel, psi2SXSecModel}, {chi2PolModel, psi2SPolModel}, {id, lambdaPsiToChi2},
+                    {1.0, B_PSIP_CHIC2[0] / br_psip_c2});
+  models.push_back(modelAsTF1(chic2XSecFull, "chic2_cs_full", 2, 40));
+  models.push_back(modelAsTF1(chic2PolFull, "chic2_pol_full", 2, 40));
+
+  // chic ratio cross section
+  const CSModel chicRatioModel = [chic1XSecFull, chic2XSecFull](double ptm) -> double {
+    return chic2XSecFull(ptm) / chic1XSecFull(ptm);
+  };
+  models.push_back(modelAsTF1(chicRatioModel, "chic_ratio_cs_full", 2, 40));
+
+  const double br_c1_jpsi = parValues[IPAR("br_c1_jpsi")];
+  const double br_c2_jpsi = parValues[IPAR("br_c2_jpsi")];
+  const double br_psip_jpsi = parValues[IPAR("br_psip_jpsi")];
+
+  const auto [jpsiXSecFull, jpsiPolFull] =
+      combineModels({jpsiXSecModel, chic1XSecFull, chic2XSecFull, psi2SXSecModel},
+                    {jpsiPolModel, chic1PolFull, chic2PolFull, psi2SPolModel}, {id, id, id, id},
+                    {1.0, B_CHIC1_JPSI[0] / br_c1_jpsi, B_CHIC2_JPSI[0] / br_c2_jpsi, B_PSIP_JPSI[0] / br_psip_jpsi});
+
+  models.push_back(modelAsTF1(jpsiXSecFull, "jpsi_cs_full", 2, 40));
+  models.push_back(modelAsTF1(jpsiPolFull, "jpsi_pol_full", 2, 40));
+
+  const std::array<double, 3> normalizations = {parValues[IPAR("norm_costh_1")], parValues[IPAR("norm_costh_2")],
+                                                parValues[IPAR("norm_costh_3")]};
+
+  for (size_t iPtBin = 0; iPtBin < normalizations.size(); ++iPtBin) {
+    const auto& ratioData = m_chic_ratios_CMS_pol[iPtBin];
+
+    const auto [xs1, lambda1] =
+        crossSecAndLambda(ratioData.first, 0.5 / M_JPSI, {chi1XSecModel, psi2SXSecModel}, {chi1PolModel, psi2SPolModel},
+                          {id, lambdaPsiToChi1}, {1.0, B_PSIP_CHIC1[0] / br_psip_c1});
+
+    const auto [xs2, lambda2] =
+        crossSecAndLambda(ratioData.first, 0.5 / M_JPSI, {chi2XSecModel, psi2SXSecModel}, {chi2PolModel, psi2SPolModel},
+                          {id, lambdaPsiToChi2}, {1.0, B_PSIP_CHIC2[0] / br_psip_c2});
+
+    const CosthRatioModel costhRatioModel = [lambda2, lambda1, normalizations, iPtBin](double costh) {
+      return costhRatio(costh, lambda2, lambda1, normalizations[iPtBin]);
+    };
+
+    std::stringstream gn;
+    const int after_dec = (ratioData.first.ptM - int(ratioData.first.ptM)) * 100;
+    gn << "chic_pol_ptM_" << int(ratioData.first.ptM) << "p" << after_dec;
+
+    models.push_back(modelAsTF1(costhRatioModel, gn.str().c_str(), 0, 1));
+  }
+
+  return models;
 }
 
 #endif

@@ -112,5 +112,9 @@ void global_fit_nrqcd(const std::string& resultsFileName, const std::string& gra
     graph.Write();
   }
 
+  for (const auto& model : likelihood.getBestFitModels(fitter.Result())) {
+    model.Write();
+  }
+
   graphFile->Close();
 }
