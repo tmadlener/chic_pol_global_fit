@@ -6,7 +6,9 @@
 #include <string>
 #include <utility>
 
-constexpr static double ccbarMassSDCs = 3.0;
+constexpr static double ccbarMassSDCs = 3.0; // GeV
+constexpr static double cQuarkMass = 1.5; // GeV
+constexpr static double cQuarkMass2 = cQuarkMass * cQuarkMass; // GeV^2
 
 /**
  * Read the total and longitudinal SDCs of the psi states. I.e build a MultiSDC
@@ -38,9 +40,9 @@ sdc::StateSDCs readPsiSDCs(std::string dataDir, sdc::SDCType sdcType=sdc::SDCTyp
   // Following the same logic as above:
   // --> S_T = 0.5 * (S_U - S_L)
 
-  // 3PJ octet
-  const auto sdc_3PJ_8_unpol = sdc::read_from_file(dataDir + "/3pjoctetunpol.txt", sdcType);
-  const auto sdc_3PJ_8_long = sdc::read_from_file(dataDir + "/3pjoctetlong.txt", sdcType);
+  // 3PJ octet (multiplied by m_c^2 to have LDMEs in same units as S-wave states)
+  const auto sdc_3PJ_8_unpol = cQuarkMass2 * sdc::read_from_file(dataDir + "/3pjoctetunpol.txt", sdcType);
+  const auto sdc_3PJ_8_long = cQuarkMass2 * sdc::read_from_file(dataDir + "/3pjoctetlong.txt", sdcType);
 
   // 1S0 octet
   const auto sdc_1S0_8 = sdc::read_from_file(dataDir + "/1s0octetunpol.txt", sdcType);
@@ -81,9 +83,9 @@ sdc::StateSDCs readChic1SDCs(std::string dataDir, sdc::SDCType sdcType=sdc::SDCT
   // determine the longitudinal SDC from the total one. The formulas used can be
   // found in PRD 83, 096001 (2011)
 
-  // 3P1 singlet
-  const auto sdc_3P1_1_unpol = sdc::read_from_file(dataDir + "/3p1singletunpol.txt", sdcType);
-  const auto sdc_3P1_1_h1 = sdc::read_from_file(dataDir + "/3P1_1_h1_Carlos_interpolation.txt", sdcType);
+  // 3P1 singlet (multiplied by m_c^2 to have LDMEs in same units as S-wave states)
+  const auto sdc_3P1_1_unpol = cQuarkMass2 * sdc::read_from_file(dataDir + "/3p1singletunpol.txt", sdcType);
+  const auto sdc_3P1_1_h1 = cQuarkMass2 * sdc::read_from_file(dataDir + "/3P1_1_h1_Carlos_interpolation.txt", sdcType);
   // We have S_total = S_U = S_0 + 2 * S_1
   // --> S_0 = S_U - 2 * S_1
   const auto sdc_3P1_1_h0 = sdc_3P1_1_unpol - 2 * sdc_3P1_1_h1;
@@ -138,10 +140,10 @@ sdc::StateSDCs readChic2SDCs(std::string dataDir, sdc::SDCType sdcType=sdc::SDCT
   // (with different formulas) as the chic1 and the general approach is detailed
   // there. Here only the different formulas are stated where necessary
 
-  // 3P2 singlet
-  const auto sdc_3P2_1_unpol = sdc::read_from_file(dataDir + "/3p2singletunpol.txt", sdcType);
-  const auto sdc_3P2_1_h1 = sdc::read_from_file(dataDir + "/3P2_1_h1_Carlos_interpolation.txt", sdcType);
-  const auto sdc_3P2_1_h2 = sdc::read_from_file(dataDir + "/3P2_1_h2_Carlos_interpolation.txt", sdcType);
+  // 3P2 singlet (multiplied by m_c^2 to have LDMEs in same units as S-waves states)
+  const auto sdc_3P2_1_unpol = cQuarkMass2 * sdc::read_from_file(dataDir + "/3p2singletunpol.txt", sdcType);
+  const auto sdc_3P2_1_h1 = cQuarkMass2 * sdc::read_from_file(dataDir + "/3P2_1_h1_Carlos_interpolation.txt", sdcType);
+  const auto sdc_3P2_1_h2 = cQuarkMass2 * sdc::read_from_file(dataDir + "/3P2_1_h2_Carlos_interpolation.txt", sdcType);
   // We have S_total = S_U = S_0 + 2 * S_1 + 2 * S_2
   // --> S0 = S_U - 2 * (S_1 + S_2)
   const auto sdc_3P2_1_h0 = sdc_3P2_1_unpol - 2 * (sdc_3P2_1_h1 + sdc_3P2_1_h2);

@@ -436,7 +436,7 @@ void GlobalLikelihoodNRQCD::setupFit() {
 void GlobalLikelihoodNRQCD::defineStartParams() {
   // TODO: Get reasonable start values
   setParam("l_3S1_8_c0", 0.002, 1);
-  setParam("l_3P0_1_c0", 0.015, 1);
+  setParam("l_3P0_1_c0", 0.007, 1);
 
   setParam("l_3S1_1_jpsi", 10, 1);   // TODO: fix these as nuisances to theory?
   setParam("l_3S1_1_psip", 0.05, 1); // TODO: fix these as nuisances to theory?

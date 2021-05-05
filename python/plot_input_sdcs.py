@@ -54,10 +54,10 @@ RAP_SCALE = 1 / 2.4 * 1.5
 SCALE_FACTORS = {
     '3S1_1': RAP_SCALE * 6,
     '3S1_8': RAP_SCALE,
-    '3PJ_8': RAP_SCALE * 1.5**2,
+    '3PJ_8': RAP_SCALE,
     '1S0_8': RAP_SCALE,
-    '3P1_1': RAP_SCALE * 6 * 1.5**2,
-    '3P2_1': RAP_SCALE * 6 * 1.5**2,
+    '3P1_1': RAP_SCALE * 6,
+    '3P2_1': RAP_SCALE * 6,
 }
 
 # Attributes for plotting comparison plots of total and longitudinal SDCs
