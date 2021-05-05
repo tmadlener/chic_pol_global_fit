@@ -15,6 +15,7 @@
 
 #include <stdexcept>
 #include <vector>
+#include <iostream>
 
 // ----------------------------------------- end params stuff
 
@@ -70,9 +71,27 @@ public:
    * Fix a parameter to the passed value
    */
   void fixParameter(const char* name, const double val) {
+    std::cout << "Fixing parameter " << name << " to " << val << std::endl;
     auto& par = m_startParams[IPAR(name)];
     par.SetValue(val);
     par.Fix();
+  }
+  void fixParameter(const std::string& name, const double val) {
+    fixParameter(name.c_str(), val);
+  }
+
+  /**
+   * Set a start parameter value for a parameter. If no error value is passed,
+   * determine it from the passed value
+   */
+  void setStartParam(const char* name, const double val, const double err=0) {
+    std::cout << "Setting start value for parameter " << name << " to " << val << " (err = " << err << ")" << std::endl;
+    auto& par = m_startParams[IPAR(name)];
+    par.SetValue(val);
+    par.SetStepSize(err != 0 ? err : val);
+  }
+  void setStartParam(const std::string& name, const double val, const double err=0) {
+    setStartParam(name.c_str(), val, err);
   }
 
   TTree* storeParameterIndices() const {
@@ -116,7 +135,7 @@ private:
   void setupFit();
 
   /**
-   * define the parameters including their starting values
+   * define the parameters including their default starting values
    */
   void defineStartParams();
 

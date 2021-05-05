@@ -11,6 +11,7 @@
 
 #include <array>
 #include <string>
+#include <fstream>
 
 void storeSDCasTGraph(TFile* file, const sdc::SDC& sdc, const std::string& name) {
   auto graph = sdc.asTGraph();
@@ -90,8 +91,54 @@ void printResult(const LikelihoodFitter& fitter, const GlobalLikelihoodNRQCD& ll
   std::cout.flags(fmtflags);
 }
 
-void global_fit_nrqcd(const std::string& resultsFileName, const std::string& graphFileName) {
+/**
+ * Set the start parameters or fix certain parameters to the values stored in
+ * the settings file. Allowed syntax:
+ *
+ * - empty lines and lines starting with '#' are ignored
+ * - To fix a parameter use
+ *
+ *   fix <paramName> <paramValue> [# comments starting with '#' are allowed]
+ *
+ * - To set a start value for a parameter (and optionally also an initial step
+ *   size) use
+ *
+ *   set <paramName> <paramValue> [<paramStepSize>] [# comments starting with '#' are allowed]
+ *
+ */
+template<typename LLH>
+void setParameters(LLH& llh, const std::string& paramsSetFN) {
+  std::ifstream setfile(paramsSetFN);
+  if (!setfile) {
+    std::cerr << "Cannot open parameters settings file: \'" << paramsSetFN <<"\'. Using the default parameter settings" << std::endl;
+    return;
+  }
+
+  std::string line;
+  std::string paramName, paramSet;
+  double value, error;
+  while(std::getline(setfile, line)) {
+    if (line[0] == '#' || line.empty()) continue;
+
+    std::stringstream linestr{line};
+    linestr >> paramSet >> paramName;
+    if (paramSet == "fix") {
+      linestr >> value;
+      llh.fixParameter(paramName, value);
+    } else if (paramSet == "set") {
+      linestr >> value >> error;
+      llh.setStartParam(paramName, value, error);
+    }
+  }
+}
+
+void global_fit_nrqcd(const std::string& resultsFileName, const std::string& graphFileName,
+                      const std::string& paramsSettingsFile="") {
   auto likelihood = get_likelihood("./data", "../SDCs_Chung");
+
+  if (!paramsSettingsFile.empty()) {
+    setParameters(likelihood, paramsSettingsFile);
+  }
 
   LikelihoodFitter fitter;
   fitter.Fit(likelihood);
