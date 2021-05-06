@@ -70,7 +70,8 @@ GlobalLikelihoodNRQCD get_likelihood(std::string dataDir, std::string sdcDir,
 void printResult(const LikelihoodFitter& fitter, const GlobalLikelihoodNRQCD& llh) {
   const double minChi2 = 2 * fitter.Result().MinFcnValue();
   const int nData = llh.nDataPoints();
-  const int nPars = llh.nPars();
+  // const int nPars = llh.nPars();
+  const int nPars = fitter.Result().NFreeParameters();
   const int nNuiss = llh.nNuissParams();
   // since in the likelihood the nuissance parameters are counted towards the
   // total number of parameters, they have to be added to the data points to
@@ -134,7 +135,7 @@ void setParameters(LLH& llh, const std::string& paramsSetFN) {
 
 void global_fit_nrqcd(const std::string& resultsFileName, const std::string& graphFileName,
                       const std::string& paramsSettingsFile="") {
-  auto likelihood = get_likelihood("./data", "../SDCs_Chung");
+  auto likelihood = get_likelihood("./data", "../SDCs_Chung", sdc::SDCType::NLO);
 
   if (!paramsSettingsFile.empty()) {
     setParameters(likelihood, paramsSettingsFile);

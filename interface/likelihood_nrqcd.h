@@ -383,8 +383,8 @@ PolModel GlobalLikelihoodNRQCD::getChi2PolModel(const double* p) const {
     ldmes[util::to_index(Chic2SDCs::s3P2_1)] = l_3P2_1_c2;
     ldmes[util::to_index(Chic2SDCs::s3S1_8)] = l_3S1_8_c2;
 
-    const auto total = m_SDC_chic1.tot(ptm, ldmes);
-    const auto longitudinal = m_SDC_chic1.lng(ptm, ldmes);
+    const auto total = m_SDC_chic2.tot(ptm, ldmes);
+    const auto longitudinal = m_SDC_chic2.lng(ptm, ldmes);
     return lambdath(longitudinal / total);
   };
 }
@@ -402,8 +402,8 @@ PolModel GlobalLikelihoodNRQCD::getPsi2SPolModel(const double* p) const {
     ldmes[util::to_index(PsiSDCs::s3PJ_8)] = l_3PJ_8_psip;
     ldmes[util::to_index(PsiSDCs::s1S0_8)] = l_1S0_8_psip;
 
-    const auto total = m_SDC_chic1.tot(ptm, ldmes);
-    const auto longitudinal = m_SDC_chic1.lng(ptm, ldmes);
+    const auto total = m_SDC_psi.tot(ptm, ldmes);
+    const auto longitudinal = m_SDC_psi.lng(ptm, ldmes);
     return lambdath(longitudinal / total);
   };
 }
@@ -421,8 +421,8 @@ PolModel GlobalLikelihoodNRQCD::getJpsiPolModel(const double* p) const {
     ldmes[util::to_index(PsiSDCs::s3PJ_8)] = l_3PJ_8_jpsi;
     ldmes[util::to_index(PsiSDCs::s1S0_8)] = l_1S0_8_jpsi;
 
-    const auto total = m_SDC_chic1.tot(ptm, ldmes);
-    const auto longitudinal = m_SDC_chic1.lng(ptm, ldmes);
+    const auto total = m_SDC_psi.tot(ptm, ldmes);
+    const auto longitudinal = m_SDC_psi.lng(ptm, ldmes);
     return lambdath(longitudinal / total);
   };
 }
