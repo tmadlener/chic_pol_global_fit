@@ -3,7 +3,7 @@ ROOTLIBS=$(shell root-config --libs) -lMinuit2
 CXXFLAGS=-std=c++17 -Wall -Wextra -Wpedantic -Wshadow -O2
 CXX=g++
 
-INCS=-I$(shell root-config --incdir) -I./interface -I$(CHIB_CHIC_POLFW_DIR)/general/interface -I$(EIGEN_INCLUDE_DIR)
+INCS=-isystem$(shell root-config --incdir) -I./interface -I$(CHIB_CHIC_POLFW_DIR)/general/interface -I$(EIGEN_INCLUDE_DIR)
 
 ADD_FLAGS=
 

@@ -36,6 +36,12 @@ template <typename E>
 constexpr auto to_index(E e) noexcept {
   return static_cast<std::underlying_type_t<E>>(e);
 }
+
+template<typename E>
+constexpr auto to_enum(int index) noexcept {
+  return static_cast<E>(index);
+}
+
 } // namespace util
 
 #endif

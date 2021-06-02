@@ -83,12 +83,29 @@ sdc::StateSDCs readChic1SDCs(std::string dataDir, sdc::SDCType sdcType=sdc::SDCT
   // determine the longitudinal SDC from the total one. The formulas used can be
   // found in PRD 83, 096001 (2011)
 
-  // 3P1 singlet (multiplied by m_c^2 to have LDMEs in same units as S-wave states)
-  const auto sdc_3P1_1_unpol = cQuarkMass2 * sdc::read_from_file(dataDir + "/3p1singletunpol.txt", sdcType);
-  const auto sdc_3P1_1_h1 = cQuarkMass2 * sdc::read_from_file(dataDir + "/3P1_1_h1_Carlos_interpolation.txt", sdcType);
-  // We have S_total = S_U = S_0 + 2 * S_1
-  // --> S_0 = S_U - 2 * S_1
-  const auto sdc_3P1_1_h0 = sdc_3P1_1_unpol - 2 * sdc_3P1_1_h1;
+  const auto inputfile_3P1 = [dataDir, sdcType]() {
+    if (sdcType == sdc::SDCType::NLO) {
+      return dataDir + "/3p1singlet_NLO.txt";
+    }
+    else if (sdcType == sdc::SDCType::LP_NLO) {
+      return dataDir + "/3p1singlet_NLOLP.txt";
+    }
+    return std::string("");
+  }();
+
+  // 3P1 singlet (re-use the sdc types to get the right column)
+  const auto sdc_3P1_1_h1 = cQuarkMass2 * sdc::read_from_file(inputfile_3P1, util::to_enum<sdc::SDCType>(1));
+  const auto sdc_3P1_1_h0 = cQuarkMass2 * sdc::read_from_file(inputfile_3P1, util::to_enum<sdc::SDCType>(0));
+
+  const auto sdc_3P1_1_unpol = sdc_3P1_1_h0 + 2 * sdc_3P1_1_h1;
+
+  // // 3P1 singlet (multiplied by m_c^2 to have LDMEs in same units as S-wave states)
+  // const auto sdc_3P1_1_unpol = cQuarkMass2 * sdc::read_from_file(dataDir + "/3p1singletunpol.txt", sdcType);
+  // const auto sdc_3P1_1_h1 = cQuarkMass2 * sdc::read_from_file(dataDir + "/3P1_1_h1_Carlos_interpolation.txt", sdcType);
+  // // We have S_total = S_U = S_0 + 2 * S_1
+  // // --> S_0 = S_U - 2 * S_1
+  // const auto sdc_3P1_1_h0 = sdc_3P1_1_unpol - 2 * sdc_3P1_1_h1;
+
   // lth = (3P1_1_h0 - 3P1_1_h1) / (3P1_1_h0 + 3 * 3P1_1_h1)
   const auto lth_3P1 = (sdc_3P1_1_h0 - sdc_3P1_1_h1) / (sdc_3P1_1_h0 + 3 * sdc_3P1_1_h1);
   const auto fL_3P1 = (1 - lth_3P1) / (3 + lth_3P1);
@@ -136,18 +153,37 @@ sdc::StateSDCs readChic2SDCs(std::string dataDir, sdc::SDCType sdcType=sdc::SDCT
   // * S_1 -> SDC of J_z = +/- 1
   // * S_2 -> SDC of J_z = +/- 2
   //
+   const auto inputfile_3P2 = [dataDir, sdcType]() {
+    if (sdcType == sdc::SDCType::NLO) {
+      return dataDir + "/3p2singlet_NLO.txt";
+    }
+    else if (sdcType == sdc::SDCType::LP_NLO) {
+      return dataDir + "/3p2singlet_NLOLP.txt";
+    }
+    return std::string("");
+  }();
+
   // The calculations for the longitudinal SDCs follows the same calculations
   // (with different formulas) as the chic1 and the general approach is detailed
   // there. Here only the different formulas are stated where necessary
 
+ // 3P1 singlet (re-use the sdc types to get the right column)
+  const auto sdc_3P2_1_h2 = cQuarkMass2 * sdc::read_from_file(inputfile_3P2, util::to_enum<sdc::SDCType>(2));
+  const auto sdc_3P2_1_h1 = cQuarkMass2 * sdc::read_from_file(inputfile_3P2, util::to_enum<sdc::SDCType>(1));
+  const auto sdc_3P2_1_h0 = cQuarkMass2 * sdc::read_from_file(inputfile_3P2, util::to_enum<sdc::SDCType>(0));
+
+  const auto sdc_3P2_1_unpol = sdc_3P2_1_h0 + 2 * sdc_3P2_1_h1 + 2 * sdc_3P2_1_h2;
+
   // 3P2 singlet (multiplied by m_c^2 to have LDMEs in same units as S-waves states)
-  const auto sdc_3P2_1_unpol = cQuarkMass2 * sdc::read_from_file(dataDir + "/3p2singletunpol.txt", sdcType);
-  const auto sdc_3P2_1_h1 = cQuarkMass2 * sdc::read_from_file(dataDir + "/3P2_1_h1_Carlos_interpolation.txt", sdcType);
-  const auto sdc_3P2_1_h2 = cQuarkMass2 * sdc::read_from_file(dataDir + "/3P2_1_h2_Carlos_interpolation.txt", sdcType);
-  // We have S_total = S_U = S_0 + 2 * S_1 + 2 * S_2
-  // --> S0 = S_U - 2 * (S_1 + S_2)
-  const auto sdc_3P2_1_h0 = sdc_3P2_1_unpol - 2 * (sdc_3P2_1_h1 + sdc_3P2_1_h2);
+  // const auto sdc_3P2_1_unpol = cQuarkMass2 * sdc::read_from_file(dataDir + "/3p2singletunpol.txt", sdcType);
+  // // const auto sdc_3P2_1_h1 = cQuarkMass2 * sdc::read_from_file(dataDir + "/3P2_1_h1_Carlos_interpolation.txt", sdcType);
+  // const auto sdc_3P2_1_h0 = cQuarkMass2 * sdc::read_from_file(dataDir + "/3P2_1_h0_Carlos_interpolation.txt", sdcType);
+  // const auto sdc_3P2_1_h2 = cQuarkMass2 * sdc::read_from_file(dataDir + "/3P2_1_h2_Carlos_interpolation.txt", sdcType);
+  // // We have S_total = S_U = S_0 + 2 * S_1 + 2 * S_2
+  // // --> S0 = S_U - 2 * (S_1 + S_2)
+  // // const auto sdc_3P2_1_h0 = sdc_3P2_1_unpol - 2 * (sdc_3P2_1_h1 + sdc_3P2_1_h2);
   // const auto sdc_3P2_1_h1 = 0.5 * (sdc_3P2_1_unpol - sdc_3P2_1_h0 - 2 * sdc_3P2_1_h2);
+
   // lth = (-3 * S_0 - 3 * S_1 + 6 * S_2) / (5 * S_0 + 9 * S_1 + 6 * S_2)
   const auto lth_3P2 = (-3 * sdc_3P2_1_h0 - 3 * sdc_3P2_1_h1 + 6 * sdc_3P2_1_h2) /
       (5 * sdc_3P2_1_h0 + 9 * sdc_3P2_1_h1 + 6 * sdc_3P2_1_h2);
