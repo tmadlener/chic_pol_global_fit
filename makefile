@@ -18,7 +18,7 @@ LIST=$(addprefix $(BIN), $(PROG))
 DEPS=$(LIST:%=%.d)
 -include $(DEPS)
 
-all: setup $(LIST)
+all: setup $(LIST) ./bin/run_pTM_scan_nrqcd
 
 debug: CXXFLAGS+=-ggdb3 -O0
 debug: CXXFLAGS:=$(filter-out -O2,$(CXXFLAGS))
@@ -33,3 +33,5 @@ $(BIN)%: $(SRC)%.cc
 clean:
 	rm -rf $(BIN)
 
+./bin/run_pTM_scan_nrqcd: src/run_pTM_scan.cc
+	$(CXX) $(INCS) $(CXXFLAGS) -MMD -MP $< -o $@ $(ROOTLIBS) $(ADD_FLAGS) -DNRQCD_FIT=1

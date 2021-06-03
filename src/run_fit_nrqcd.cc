@@ -1,5 +1,3 @@
-#include "misc_utils.h"
-
 #include "ArgParser.h"
 #include "global_fit_nrqcd.C"
 
@@ -9,15 +7,6 @@
 #include <iostream>
 #include <cstdlib>
 
-sdc::SDCType asOrderEnum(const std::string& sdcOrder) {
-  const auto it = std::find(sdc::SDCTypeNames.begin(), sdc::SDCTypeNames.end(), sdcOrder);
-  if (it == sdc::SDCTypeNames.end()) {
-    std::cerr << "Argument to --order is not valid. Must be one of \'LO\', \'NLO\' or \'LP+NLO\'" << std::endl;
-    std::exit(1);
-  }
-
-  return util::to_enum<sdc::SDCType>(std::distance(sdc::SDCTypeNames.begin(), it));
-}
 
 int main(int argc, char* argv[]) {
   const auto parser = ArgParser(argc, argv);

@@ -1,16 +1,26 @@
 #ifndef STORE_VARIABLES_H__
 #define STORE_VARIABLES_H__
 
-#include "likelihood.h"
 #include "likelihood_helpers.h"
+
+#ifndef NRQCD_FIT
+#define NRQCD_FIT 0
+#endif
+
+#if NRQCD_FIT
+#include "fit_parameters_nrqcd.h"
+#else
 #include "fit_parameters.h"
+#endif
 
 #include "TTree.h"
 
 #include <tuple> // std::tie
 #include <cmath> // std::isnan
 
+template<typename LLH>
 struct StoreVariables {
+  StoreVariables(const LLH& llh) : m_llh(llh) {}
 
   TTree* create(bool storeParams=true);
 
@@ -49,9 +59,11 @@ struct StoreVariables {
   double chic2_chic1_cs_br;
 
   std::array<double, NPARS()> pVals{};
+  const LLH& m_llh;
 };
 
-TTree* StoreVariables::create(bool storeParams)
+template<typename LLH>
+TTree* StoreVariables<LLH>::create(bool storeParams)
 {
   TTree* tree = new TTree("ptm_dep_scan", "values of random scans as a function of pT/M");
 
@@ -94,21 +106,28 @@ TTree* StoreVariables::create(bool storeParams)
   return tree;
 }
 
-bool StoreVariables::operator()(const double ptm, const std::vector<double>& p)
+template<typename LLH>
+bool StoreVariables<LLH>::operator()(const double ptm, const std::vector<double>& p)
 {
   ptM = ptm;
   for (size_t i = 0; i < pVals.size(); ++i) {
     pVals[i] = p[i];
   }
 
-  const auto psi2SXSecModel = GlobalLikelihood::getPsi2SXSecModel(p.data());
-  const auto chi2XSecModel = GlobalLikelihood::getChi2XSecModel(p.data());
-  const auto chi1XSecModel = GlobalLikelihood::getChi1XSecModel(p.data());
-  const auto jpsiXSecModel = GlobalLikelihood::getJpsiXSecModel(p.data());
+  const auto psi2SXSecModel = m_llh.getPsi2SXSecModel(p.data());
+  const auto chi2XSecModel = m_llh.getChi2XSecModel(p.data());
+  const auto chi1XSecModel = m_llh.getChi1XSecModel(p.data());
+  const auto jpsiXSecModel = m_llh.getJpsiXSecModel(p.data());
 
-  const auto psiPolModel = GlobalLikelihood::getPsiPolModel(p.data());
-  const auto chi2PolModel = GlobalLikelihood::getChi2PolModel(p.data());
-  const auto chi1PolModel = GlobalLikelihood::getChi1PolModel(p.data());
+#if NRQCD_FIT
+  const auto psi2SPolModel = m_llh.getPsi2SPolModel(p.data());
+  const auto jpsiPolModel = m_llh.getJpsiPolModel(p.data());
+#else
+  const auto psi2SPolModel = m_llh.getPsiPolModel(p.data());
+  const auto jpsiPolModel = m_llh.getPsiPolModel(p.data());
+#endif
+  const auto chi2PolModel = m_llh.getChi2PolModel(p.data());
+  const auto chi1PolModel = m_llh.getChi1PolModel(p.data());
 
   jpsi_cs_dir = jpsiXSecModel(ptM);
   chic1_cs_dir = chi1XSecModel(ptM);
@@ -119,11 +138,11 @@ bool StoreVariables::operator()(const double ptm, const std::vector<double>& p)
 
   const Identity<double> id;
 
-  std::tie(psip_cs, lth_psip) = crossSecAndLambda(ptM, {psi2SXSecModel}, {psiPolModel}, {id}, {1.0});
+  std::tie(psip_cs, lth_psip) = crossSecAndLambda(ptM, {psi2SXSecModel}, {psi2SPolModel}, {id}, {1.0});
 
   const double br_psip_c2 = p[IPAR("br_psip_c2")];
   std::tie(chic2_cs, lth_chic2) = crossSecAndLambda(ptM, {chi2XSecModel, psi2SXSecModel},
-                                                    {chi2PolModel, psiPolModel}, {id, lambdaPsiToChi2},
+                                                    {chi2PolModel, psi2SPolModel}, {id, lambdaPsiToChi2},
                                                     {1.0, B_PSIP_CHIC2[0] / br_psip_c2});
 
   const double br_psip_c1 = p[IPAR("br_psip_c1")];
@@ -138,8 +157,8 @@ bool StoreVariables::operator()(const double ptm, const std::vector<double>& p)
   std::tie(jpsi_cs, lth_jpsi) = crossSecAndLambda(ptM,
                                                   {jpsiXSecModel, chi1XSecModel, chi2XSecModel,
                                                       psi2SXSecModel, psi2SXSecModel, psi2SXSecModel},
-                                                  {psiPolModel, chi1PolModel, chi2PolModel,
-                                                      psiPolModel, psiPolModel, psiPolModel},
+                                                  {jpsiPolModel, chi1PolModel, chi2PolModel,
+                                                      psi2SPolModel, psi2SPolModel, psi2SPolModel},
                                                   {id, id, id, id, lambdaPsiToChi1, lambdaPsiToChi2},
                                                   {1.0, B_CHIC1_JPSI[0] / br_c1_jpsi,
                                                       B_CHIC2_JPSI[0] / br_c2_jpsi,
@@ -168,7 +187,8 @@ bool StoreVariables::operator()(const double ptm, const std::vector<double>& p)
   return valid();
 }
 
-bool StoreVariables::valid() const
+template<typename LLH>
+bool StoreVariables<LLH>::valid() const
 {
   return !(std::isnan(psip_cs) ||
            std::isnan(jpsi_cs) ||

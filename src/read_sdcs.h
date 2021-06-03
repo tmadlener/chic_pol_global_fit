@@ -10,6 +10,16 @@ constexpr static double ccbarMassSDCs = 3.0; // GeV
 constexpr static double cQuarkMass = 1.5; // GeV
 constexpr static double cQuarkMass2 = cQuarkMass * cQuarkMass; // GeV^2
 
+sdc::SDCType asOrderEnum(const std::string& sdcOrder) {
+  const auto it = std::find(sdc::SDCTypeNames.begin(), sdc::SDCTypeNames.end(), sdcOrder);
+  if (it == sdc::SDCTypeNames.end()) {
+    std::cerr << "Argument to --order is not valid. Must be one of \'LO\', \'NLO\' or \'LP+NLO\'" << std::endl;
+    std::exit(1);
+  }
+
+  return util::to_enum<sdc::SDCType>(std::distance(sdc::SDCTypeNames.begin(), it));
+}
+
 /**
  * Read the total and longitudinal SDCs of the psi states. I.e build a MultiSDC
  * that represents all the intermediate states that contribute to direct psi

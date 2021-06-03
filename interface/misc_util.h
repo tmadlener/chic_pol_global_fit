@@ -3,6 +3,7 @@
 
 #include <type_traits>
 #include <vector>
+#include <cmath>
 
 namespace util {
 inline double interpolate(double x, double x0, double x1, double y0, double y1) {

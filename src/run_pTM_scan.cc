@@ -1,3 +1,11 @@
+#ifndef NRQCD_FIT
+#define NRQCD_FIT 0
+#endif
+
+#if NRQCD_FIT
+#include "read_sdcs.h"
+#endif
+
 #include "pTM_scan.C"
 #include "ArgParser.h"
 
@@ -13,8 +21,13 @@ int main(int argc, char* argv[])
   const auto nscans = parser.getOptionVal<size_t>("--nscans", 20000);
   const auto noparams = parser.getOptionVal<bool>("--noparams", false);
 
-
+#if NRQCD_FIT
+  const auto sdcOrder = parser.getOptionVal<std::string>("--order", "NLO");
+  const auto order = asOrderEnum(sdcOrder);
+  pTM_scan(fitresult, outfile, ptmmin, ptmmax, npoints, nscans, !noparams, order);
+#else
   pTM_scan(fitresult, outfile, ptmmin, ptmmax, npoints, nscans, !noparams);
+#endif
 
   return 0;
 }

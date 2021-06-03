@@ -68,6 +68,14 @@ constexpr static int NPARS(int max = 0, int index = 0) {
       NRQCD_PARAMETERS[index].second > max ? NPARS(NRQCD_PARAMETERS[index].second, index + 1) : NPARS(max, index + 1);
 }
 
+/**
+ * Get the first name corresponding to the passed parameter index
+ */
+static constexpr const char* PARNAME(const int index)
+{
+  return getParName(NRQCD_PARAMETERS, index);
+}
+
 template <size_t N = NPARS()>
 void parametersIndicesAsTTree(TTree* tree, const std::array<ParameterIndex, N>& parameters = NRQCD_PARAMETERS) {
   std::array<int, N> indices;

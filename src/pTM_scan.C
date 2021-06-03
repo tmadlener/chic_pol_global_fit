@@ -1,5 +1,17 @@
+#ifndef NRQCD_FIT
+#define NRQCD_FIT 0
+#endif
+
+#if NRQCD_FIT
+#include "likelihood_nrqcd.h"
+#include "read_sdcs.h"
+#else
+#include "likelihood.h"
+#endif
+
 #include "multivariate_normal_distribution.h"
 #include "store_variables.h"
+
 
 #include "progress.h"
 #include "misc_utils.h"
@@ -34,7 +46,8 @@ std::pair<std::vector<double>, std::vector<double>> readFitResults(const std::st
   return {*par, *cov};
 }
 
-size_t scan_ptM_point(const double ptM, StoreVariables& storeVars,
+template<typename LLH>
+size_t scan_ptM_point(const double ptM, StoreVariables<LLH>& storeVars,
                       const MultivariateNormalDistribution<>& mvn, TTree* tree,
                     size_t nscans=1000)
 {
@@ -53,7 +66,12 @@ size_t scan_ptM_point(const double ptM, StoreVariables& storeVars,
 void pTM_scan(const std::string& fitResultsFile,
               const std::string& scanFileName,
               const double ptMmin, const double ptMmax, const size_t nPoints, const size_t nScans,
+#if NRQCD_FIT
+              const bool storeParams=true, sdc::SDCType order=sdc::SDCType::NLO)
+#else
               const bool storeParams=true)
+#endif
+
 {
   std::vector<double> params;
   std::vector<double> cov;
@@ -61,7 +79,16 @@ void pTM_scan(const std::string& fitResultsFile,
   std::tie(params, cov) = readFitResults(fitResultsFile);
   const MultivariateNormalDistribution<> multiVarNorm(params, cov);
 
-  StoreVariables storeVars;
+#if NRQCD_FIT
+
+  GlobalLikelihoodNRQCD likelihood(readPsiSDCs("../SDCs_Chung", order),
+                                   readChic1SDCs("../SDCs_Chung", order),
+                                   readChic2SDCs("../SDCs_Chung", order));
+  StoreVariables<GlobalLikelihoodNRQCD> storeVars(likelihood);
+#else
+  GlobalLikelihood likelihood;
+  StoreVariables<GlobalLikelihood> storeVars(likelihood);
+#endif
   TFile* scanFile = new TFile(scanFileName.c_str(), "recreate");
   TTree* scanTree = storeVars.create(storeParams);
 

@@ -21,6 +21,12 @@
 
 class GlobalLikelihoodNRQCD {
 public:
+  GlobalLikelihoodNRQCD(const sdc::StateSDCs&& psi_SDC, const sdc::StateSDCs&& chic1_SDC,
+                        const sdc::StateSDCs&& chic2_SDC) :
+    m_SDC_psi(std::move(psi_SDC)),
+    m_SDC_chic1(std::move(chic1_SDC)),
+    m_SDC_chic2(std::move(chic2_SDC)) {}
+
   /**
    * Constructor with signature that is compatible with the GlobalLikelihood
    * constructor signature
