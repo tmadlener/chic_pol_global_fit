@@ -32,7 +32,8 @@ r.gInterpreter.LoadFile(f'{THIS_DIR}/../interface/nrqcd_helpers.h')
 r.gInterpreter.LoadText(AUXILIARY_CPP_FUNCS)
 from ROOT import sdc
 from ROOT import readPsiSDCs, readChic1SDCs, readChic2SDCs, lth_from_flong, scale_sdc
-XRANGE = (1.5, 14.5) # Same as in PLB 773 (2017) 476
+XRANGE = (5, 120) # Same as in PLB 773 (2017) 476
+X_AXIS_UNIT = 'p_{T}'
 
 # Load plotting helper
 from utils.plot_helpers import mkplot, default_attributes, setup_legend
@@ -96,14 +97,14 @@ def plot_all_sdcs(sdcdir, order, outdir):
         s = sdc.read_from_file(fn, order)
         s.scale_support(1 / r.ccbarMassSDCs) # rescale to pT/M
         can = mkplot(s.asTGraph(), drawOpt='P',
-                     xRange=XRANGE, xLabel='p_{T}/M',
+                     xRange=XRANGE, xLabel=X_AXIS_UNIT,
                      yLabel=name)
         can.SaveAs(f'{outdir}/{name}.pdf')
 
         graphs = [g for g in s.asAlwaysPositiveGraphs() if g.GetN() > 0]
         can = mkplot(graphs,
                      drawOpt='P', logy=True,
-                     xRange=XRANGE, xLabel='p_{T}/M',
+                     xRange=XRANGE, xLabel=X_AXIS_UNIT,
                      legOpt='P', legPos=(0.75, 0.8, 0.88, 0.88), legEntries=('original', 'flipped'),
                      ydscale=0.1, yLabel=f'{name} (negative values flipped)')
         can.SaveAs(f'{outdir}/{name}_log_positive.pdf')
@@ -127,8 +128,8 @@ def _plot_state_sdcs(sdcdir, order, outdir, base_name, state_enum, states, read_
 
     leg = setup_legend(0.75, 0.75, 0.92, 0.91)
     can = _plot_total_sdc(states[0], drawOpt='C', leg=leg,
-                           xRange=XRANGE, xLabel='p_{T}/M',
-                           logy=True, yLabel='total SDCs', yRange=[2e-2, 0.5e5])
+                           xRange=XRANGE, logx=True, xLabel=X_AXIS_UNIT,
+                           logy=True, yLabel='total SDCs', yRange=[1e-3, 0.5e5])
 
     for state in states[1:]:
         can = _plot_total_sdc(state, drawOpt='C same', leg=leg, can=can)
@@ -144,7 +145,7 @@ def _plot_state_sdcs(sdcdir, order, outdir, base_name, state_enum, states, read_
 
     leg = setup_legend(0.75, 0.8, 0.92, 0.94)
     can = _plot_lth(states[0], drawOpt='C', leg=leg,
-                    xRange=XRANGE, xLabel='p_{T}/M',
+                    xRange=XRANGE, xLabel=X_AXIS_UNIT, logx=True,
                     yRange=[-2, 2], yLabel='#lambda_{#vartheta}^{#psi}')
     for state in states[1:]:
         can = _plot_lth(state, drawOpt='C same', leg=leg, can=can)
@@ -157,7 +158,7 @@ def _plot_state_sdcs(sdcdir, order, outdir, base_name, state_enum, states, read_
         leg = setup_legend(0.75, 0.8, 0.93, 0.94)
         can = mkplot([g for g in sdc_tot.asAlwaysPositiveGraphs() if g.GetN() > 0],
                      drawOpt='P', logy=True, attr=ATTRS_LT[:2],
-                     xRange=XRANGE, xLabel='p_{T}/M',
+                     xRange=XRANGE, xLabel=X_AXIS_UNIT,
                      legOpt='P', leg=leg, legEntries=('tot +', 'tot -'),
                      ydscale=0.1, yLabel=f'{state} SDCs')
 
