@@ -11,7 +11,7 @@ r.gROOT.SetBatch()
 from utils.plot_helpers import (
     mkplot, setup_legend, default_colors, _setup_canvas
 )
-from utils.misc_helpers import cond_mkdir
+from utils.misc_helpers import cond_mkdir, get_vals_from_rwbuffer
 from utils.setup_plot_style import set_basic_style
 from utils.data_handling import list_obj
 from utils.graph_utils import scale_graph, pull_graph, divide_func, shift_graph
@@ -62,8 +62,8 @@ def _rel_diff_plot(graphs, model, **kwargs):
     # first assign the model values as uncertainties to the graphs
     delta_graphs = []
     for g in graphs:
-        x_vals = np.array(g.GetX())
-        y_vals = np.array(g.GetY())
+        x_vals = get_vals_from_rwbuffer(g.GetX(), g.GetN())
+        y_vals = get_vals_from_rwbuffer(g.GetY(), g.GetN())
         fy_vals = np.array([model.Eval(x) for x in x_vals])
         dy_vals = (y_vals - fy_vals)
         delta_graphs.append(divide_func(
