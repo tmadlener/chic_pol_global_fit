@@ -49,7 +49,7 @@ std::pair<std::vector<double>, std::vector<double>> readFitResults(const std::st
 template<typename LLH>
 size_t scan_ptM_point(const double ptM, StoreVariables<LLH>& storeVars,
                       const MultivariateNormalDistribution<>& mvn, TTree* tree,
-                    size_t nscans=1000)
+                      size_t nscans=1000)
 {
   size_t nValid = 0;
   for (size_t iScan = 0; iScan < nscans; ++iScan) {
@@ -67,6 +67,7 @@ void pTM_scan(const std::string& fitResultsFile,
               const std::string& scanFileName,
               const double ptMmin, const double ptMmax, const size_t nPoints, const size_t nScans,
 #if NRQCD_FIT
+              const std::string& sdcDir,
               const bool storeParams=true, sdc::SDCType order=sdc::SDCType::NLO)
 #else
               const bool storeParams=true)
@@ -81,9 +82,9 @@ void pTM_scan(const std::string& fitResultsFile,
 
 #if NRQCD_FIT
 
-  GlobalLikelihoodNRQCD likelihood(readPsiSDCs("../SDCs_Chung", order),
-                                   readChic1SDCs("../SDCs_Chung", order),
-                                   readChic2SDCs("../SDCs_Chung", order));
+  GlobalLikelihoodNRQCD likelihood(readPsiSDCs(sdcDir, order),
+                                   readChic1SDCs(sdcDir, order),
+                                   readChic2SDCs(sdcDir, order));
   StoreVariables<GlobalLikelihoodNRQCD> storeVars(likelihood);
 #else
   GlobalLikelihood likelihood;

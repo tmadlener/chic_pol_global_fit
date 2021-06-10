@@ -58,6 +58,13 @@ struct StoreVariables {
   double chic2_chic1_cs;
   double chic2_chic1_cs_br;
 
+#if NRQCD_FIT
+  double l_3PJ_8_jpsi;
+  double l_3S1_8_jpsi;
+  double l_3PJ_8_psip;
+  double l_3S1_8_psip;
+#endif
+
   std::array<double, NPARS()> pVals{};
   const LLH& m_llh;
 };
@@ -96,6 +103,14 @@ TTree* StoreVariables<LLH>::create(bool storeParams)
   tree->Branch("chic2_chic1_cs", &chic2_chic1_cs);
   tree->Branch("chic2_chic1_cs_br", &chic2_chic1_cs_br);
   tree->Branch("dlth_chic2_chic1", &dlth_chic2_chic1);
+
+#if NRQCD_FIT
+  tree->Branch("l_3PJ_8_jpsi", &l_3PJ_8_jpsi);
+  tree->Branch("l_3S1_8_jpsi", &l_3S1_8_jpsi);
+  tree->Branch("l_3PJ_8_psip", &l_3PJ_8_psip);
+  tree->Branch("l_3S1_8_psip", &l_3S1_8_psip);
+#endif
+
 
   if (storeParams) {
     for (size_t iPar = 0; iPar < pVals.size(); ++iPar) {
@@ -183,6 +198,16 @@ bool StoreVariables<LLH>::operator()(const double ptm, const std::vector<double>
 
   lth_jpsi_chic = weightedLambda({lth_chic1, lth_chic2}, {r_chic1_jpsi / r_chic_jpsi, r_chic2_jpsi / r_chic_jpsi});
   dlth_jpsi_psip = lth_jpsi - lth_psip;
+
+#if NRQCD_FIT
+  const double l_1S0_8_jpsi = p[IPAR("l_1S0_8_jpsi")];
+  l_3PJ_8_jpsi = p[IPAR("l_r_3PJ_8_1S0_8_jpsi")] * l_1S0_8_jpsi;
+  l_3S1_8_jpsi = p[IPAR("l_r_3S1_8_1S0_8_jpsi")] * l_1S0_8_jpsi;
+
+  const double l_1S0_8_psip = p[IPAR("l_1S0_8_psip")];
+  l_3PJ_8_psip = p[IPAR("l_rr_3PJ_8_1S0_8_psip_jpsi")] * p[IPAR("l_r_3PJ_8_1S0_8_jpsi")] * l_1S0_8_psip;
+  l_3S1_8_psip = p[IPAR("l_rr_3S1_8_1S0_8_psip_jpsi")] * p[IPAR("l_r_3S1_8_1S0_8_jpsi")] * l_1S0_8_psip;
+#endif
 
   return valid();
 }

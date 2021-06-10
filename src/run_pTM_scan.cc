@@ -23,8 +23,9 @@ int main(int argc, char* argv[])
 
 #if NRQCD_FIT
   const auto sdcOrder = parser.getOptionVal<std::string>("--order", "NLO");
+  const auto sdcDir = parser.getOptionVal<std::string>("--sdcdir");
   const auto order = asOrderEnum(sdcOrder);
-  pTM_scan(fitresult, outfile, ptmmin, ptmmax, npoints, nscans, !noparams, order);
+  pTM_scan(fitresult, outfile, ptmmin, ptmmax, npoints, nscans, sdcDir, !noparams, order);
 #else
   pTM_scan(fitresult, outfile, ptmmin, ptmmax, npoints, nscans, !noparams);
 #endif
