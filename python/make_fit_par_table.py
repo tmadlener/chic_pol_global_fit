@@ -157,7 +157,7 @@ def get_vals_uncers(datafile, par_to_idx):
     """Get the values and uncertainties of all parameters"""
     data = get_dataframe(datafile, 'fit_result')
     pars = data.parameters[0]
-    n_pars = np.max(par_to_idx.values()) + 1
+    n_pars = np.max([int(i) for i in par_to_idx.values()]) + 1
     if len(pars) != n_pars:
         print('Parameters and par_to_idx do not have the same length!')
         return
@@ -165,7 +165,7 @@ def get_vals_uncers(datafile, par_to_idx):
     cov = np.reshape(data.cov_matrix[0], (n_pars, n_pars))
 
     vals = {}
-    for par, idx in par_to_idx.iteritems():
+    for par, idx in par_to_idx.items():
         vals[par] = (pars[idx], np.sqrt(cov[idx, idx]))
 
     return vals
