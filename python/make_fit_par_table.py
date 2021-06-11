@@ -218,8 +218,8 @@ def print_val(data, var, percent=False):
         quants *= 100
         err_lo, err_hi = np.diff(quants)
     else:
-        fmt_str_asym = r'${:.3f}^{{+{:.3f}}}_{{-{:.3f}}}$'
-        fmt_str_sym = r'${:.3f} \pm {:.3f}$'
+        fmt_str_asym = r'${:.3e}^{{+{:.3e}}}_{{-{:.3e}}}$'
+        fmt_str_sym = r'${:.3e} \pm {:.3e}$'
 
     if asym:
         return fmt_str_asym.format(quants[1], err_hi, err_lo)
