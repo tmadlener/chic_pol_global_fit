@@ -63,6 +63,22 @@ DERIV_PARS = (
     'l_3PJ_8_psip',
 )
 
+NUISANCE_PARS = (
+    'norm_costh_1',
+    'norm_costh_2',
+    'norm_costh_3',
+    'br_psip_dp',
+    'br_psip_mm',
+    'br_psip_c2',
+    'br_psip_c1',
+    'br_psip_jpsi',
+    'br_c2_jpsi',
+    'br_c1_jpsi',
+    'br_jpsi_mm',
+    'L_ATLAS',
+    'L_CMS',
+)
+
 PREAMBLE = r'''\documentclass[a4paper, 11pt]{scrartcl}
 
 \usepackage{graphicx}
@@ -108,16 +124,37 @@ def pretty_label(par):
     if par in PRETTY_PAR: return PRETTY_PAR[par]
     return par.replace('_', r'\_')
 
+def get_par_indices(res_file):
+    """Get the parameter indices in the order in which they should appear in the table"""
+    dfr = get_dataframe(res_file, 'parameter_indices')
+    all_indices = {p: i for p, i in zip(dfr.columns, dfr.values[0])}
+
+    # Sort all the nuiscance parameters to the end
+    indices = {}
+    for par, idx in all_indices.items():
+        if par not in NUISANCE_PARS:
+            indices[par] = idx
+
+    for par, idx in all_indices.items():
+        if par in NUISANCE_PARS:
+            indices[par] = idx
+
+    return indices
+
 def add_fit_param_table(res_file):
     """Add the fit parameter table from the fit result file (relative to the result dir)"""
-    par_indices = get_dataframe(res_file, 'parameter_indices')
-    par_indices = {
-        p: i for p, i in zip(par_indices.columns, par_indices.values[0])
-    }
+    par_indices = get_par_indices(res_file)
 
     vals_uncers = get_vals_uncers(res_file, par_indices)
+
     rows = [r'parameter & best-fit value \\ \hline']
+    have_line = False
     for par, (val, err) in vals_uncers.items():
+        if not have_line and par in NUISANCE_PARS:
+            # Insert a separation between nuisance params and others
+            rows.append(r'\hline\hline')
+            have_line = True
+
         rows.append(
             fr'{pretty_label(par)} & ${fmt_float(val)} \pm {fmt_float(err)}$ \\'
         )
