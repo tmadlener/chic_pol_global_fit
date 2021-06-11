@@ -7,10 +7,12 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)"
 BASE_DIR=$(realpath ${SCRIPT_DIR}/../)
 PYTHON_DIR=${BASE_DIR}/python
 
+SCENARIO="1S0_only"
+SDC_ORDER="LP+NLO"
+
 # Some adjustable settings
-PARAMS_SETTINGS=${BASE_DIR}/misc/settings_1S0_only_NLO.txt
-OUTBASE="SDCs_Carlos_interpol/fit_1S0_only"
-SDC_ORDER="NLO"
+PARAMS_SETTINGS=${BASE_DIR}/misc/settings_${SCENARIO}_${SDC_ORDER}.txt
+OUTBASE="SDCs_Carlos_interpol/fit_"${SCENARIO}_${SDC_ORDER}
 
 # Semi fixed settings, only change these if you know what you want
 DATADIR=${BASE_DIR}/data
@@ -23,7 +25,7 @@ FIT_RESULT_FILE="fit_results_nrqcd_global_fit.root"
 SCAN_RESULT_FILE="param_scan_ptm5.root"
 
 # Computed filenames, directories and settings
-result_dir=${BASE_DIR}/${OUTBASE}_${SDC_ORDER}
+result_dir=${BASE_DIR}/${OUTBASE}
 fit_result=${result_dir}/${FIT_RESULT_FILE}
 scan_result=${result_dir}/${SCAN_RESULT_FILE}
 

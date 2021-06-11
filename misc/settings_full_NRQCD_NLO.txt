@@ -1,0 +1,11 @@
+# Params settings file for running a 1S0 only fit at NLO
+
+# j/psi
+fix l_3S1_1_jpsi 0
+
+# psip
+fix l_3S1_1_psip 0
+
+# These double ratios should always be 1
+fix l_rr_3PJ_8_1S0_8_psip_jpsi 1
+fix l_rr_3S1_8_1S0_8_psip_jpsi 1

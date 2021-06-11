@@ -1,0 +1,12 @@
+# Params settings file for running a 1S0 only fit at NLO
+
+# j/psi
+fix l_3S1_1_jpsi 0
+fix l_r_3PJ_8_1S0_8_jpsi 0
+fix l_r_3S1_8_1S0_8_jpsi 0
+set l_1S0_8_jpsi 0.1 0.5
+
+# psip
+fix l_3S1_1_psip 0
+fix l_rr_3PJ_8_1S0_8_psip_jpsi 1  # fix these to an arbitrary value to remove them from
+fix l_rr_3S1_8_1S0_8_psip_jpsi 1  # the free parameter list
