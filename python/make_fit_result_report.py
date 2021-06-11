@@ -138,11 +138,11 @@ def main(args):
     graphfile = os.path.join(args.resultdir, 'fit_graphs_and_models_nrqcd_global_fit.root')
 
     # Produce the plots
-    plot_args = Namespace(graphfile=graphfile, outdir=PLOT_DIR)
+    plot_args = Namespace(graphfile=graphfile, outdir=f'{args.resultdir}/{PLOT_DIR}')
     plots.main(plot_args)
 
     # Scan data loading
-    scan_data = get_dataframe(f'{args.resultdir}/ptm_dep_scan_results.root')
+    scan_data = get_dataframe(f'{args.resultdir}/param_scan_ptm5.root')
 
     with open_tex_file(f'{args.resultdir}/fit_results_report.tex', PREAMBLE) as texfile:
         texfile.write(add_fit_plots(PLOT_DIR))

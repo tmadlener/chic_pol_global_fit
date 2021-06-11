@@ -136,9 +136,11 @@ void setParameters(LLH& llh, const std::string& paramsSetFN) {
 }
 
 void global_fit_nrqcd(const std::string& outdir,
+                      const std::string& dataDir,
+                      const std::string& sdcDir,
                       sdc::SDCType sdcType=sdc::SDCType::NLO,
                       const std::string& paramsSettingsFile="") {
-  auto likelihood = get_likelihood("./data", "../SDCs_Chung", outdir, sdcType);
+  auto likelihood = get_likelihood(dataDir, sdcDir, outdir, sdcType);
 
   if (!paramsSettingsFile.empty()) {
     setParameters(likelihood, paramsSettingsFile);
