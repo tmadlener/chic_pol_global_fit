@@ -1,0 +1,13 @@
+# Parameter settings for fitting allowing to change and fix parameters before
+# starting the fit. To fix a parameter provide the parameter name as well as the
+# desired value for fixing, e.g.
+#
+# fix param1 42  # comments to describe this are OK
+#
+# To set a parameter to a given start value provide the parameter name and a
+# desired start value (and optionally also an initial step size), e.g.:
+#
+# set param2 3.14      # parameter without initial step size
+# set param3 1.23 0.45 # parameter with initial step size
+#
+# If no initial step size is provided the start value will be used for that
