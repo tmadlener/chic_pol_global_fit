@@ -69,7 +69,8 @@ GlobalLikelihoodNRQCD get_likelihood(std::string dataDir, std::string sdcDir,
   return GlobalLikelihoodNRQCD(std::move(data), std::move(psi_SDC), std::move(chic1_SDC), std::move(chic2_SDC));
 }
 
-void printResult(const LikelihoodFitter& fitter, const GlobalLikelihoodNRQCD& llh) {
+void printResult(const LikelihoodFitter& fitter, const GlobalLikelihoodNRQCD& llh,
+                 const std::string& outdir) {
   const double minChi2 = 2 * fitter.Result().MinFcnValue();
   const int nData = llh.nDataPoints();
   // const int nPars = llh.nPars();
@@ -92,6 +93,16 @@ void printResult(const LikelihoodFitter& fitter, const GlobalLikelihoodNRQCD& ll
             << "===============================================================\n";
 
   std::cout.flags(fmtflags);
+
+  std::ofstream resultJson(outdir + "/fit_result_info.json");
+  if (resultJson) {
+    resultJson << "{\n"
+               << "  \"n_data\": " << nData << ",\n"
+               << "  \"n_pars\": " << nPars << ",\n"
+               << "  \"n_nuis\": " << nNuiss << ",\n"
+               << "  \"chi2\": " << minChi2 << ",\n"
+               << "  \"ndf\": " << ndf << "\n}";
+  }
 }
 
 /**
@@ -148,7 +159,7 @@ void global_fit_nrqcd(const std::string& outdir,
 
   LikelihoodFitter fitter;
   fitter.Fit(likelihood);
-  printResult(fitter, likelihood);
+  printResult(fitter, likelihood, outdir);
 
   const auto resultsFileName = outdir + "/fit_results_nrqcd_global_fit.root";
   const auto graphFileName = outdir + "/fit_graphs_and_models_nrqcd_global_fit.root";

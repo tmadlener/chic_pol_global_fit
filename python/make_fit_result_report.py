@@ -4,6 +4,7 @@ Script to make a basic fit result summary pdf
 """
 
 import os
+import json
 
 from argparse import Namespace
 
@@ -170,6 +171,19 @@ def add_deriv_par_table(data):
 
     return create_table(rows, 'l | c', caption='Derived parameter values at $p_{T}/M = 5$')
 
+def add_fit_quality_info(res_dir):
+    """Add some information about the fit quality"""
+    lines = []
+    with open(f'{res_dir}/fit_result_info.json', 'r') as infof:
+        fit_info = json.load(infof)
+
+    lines.append(fr'Number of fitted data points: {fit_info["n_data"]}')
+    lines.append(fr'Total number of free parameters: {fit_info["n_pars"]}')
+    lines.append(fr'Number of nuisance parameters: {fit_info["n_nuis"]}')
+    lines.append(fr'$\chi^{2}$ / ndf = {fit_info["chi2"]} / {fit_info["ndf"]}')
+
+    return r'\\'.join(lines)
+
 def main(args):
     """Main"""
     graphfile = os.path.join(args.resultdir, 'fit_graphs_and_models_nrqcd_global_fit.root')
@@ -182,6 +196,8 @@ def main(args):
     scan_data = get_dataframe(f'{args.resultdir}/param_scan_ptm5.root')
 
     with open_tex_file(f'{args.resultdir}/fit_results_report.tex', PREAMBLE) as texfile:
+        texfile.write(add_fit_quality_info(args.resultdir))
+
         texfile.write(add_fit_plots(PLOT_DIR))
         texfile.write('\n')
 
