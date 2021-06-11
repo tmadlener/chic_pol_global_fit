@@ -45,6 +45,7 @@ void storeAllContributions(TFile* file, const sdc::StateSDCs& sdcs, const std::a
 }
 
 GlobalLikelihoodNRQCD get_likelihood(std::string dataDir, std::string sdcDir,
+                                     const std::string& outdir,
                                      sdc::SDCType sdcType = sdc::SDCType::LP_NLO) {
   const auto data = read_all_data(dataDir, 2); // pT/M >= 2
   const auto psi_SDC = readPsiSDCs(sdcDir, sdcType);
@@ -55,7 +56,8 @@ GlobalLikelihoodNRQCD get_likelihood(std::string dataDir, std::string sdcDir,
 
   // Store the input SDCs for a bit of checking and potentially for plotting
   // later as well
-  TFile* inputSDCFile = new TFile("./results/nrqcd_fit/input_sdcs.root", "recreate");
+  const auto sdcFileName = outdir + "/input_sdcs.root";
+  TFile* inputSDCFile = new TFile(sdcFileName.c_str(), "recreate");
   storeAllContributions(inputSDCFile, psi_SDC, allPsiSDCs, "psi_" + sdcTypeName, PsiSDCsNames);
   storeAllContributions(inputSDCFile, chic1_SDC, allChic1SDCs, "chic1_" + sdcTypeName, Chic1SDCsNames);
   storeAllContributions(inputSDCFile, chic2_SDC, allChic2SDCs, "chic2_" + sdcTypeName, Chic2SDCsNames);
@@ -133,10 +135,10 @@ void setParameters(LLH& llh, const std::string& paramsSetFN) {
   }
 }
 
-void global_fit_nrqcd(const std::string& resultsFileName, const std::string& graphFileName,
+void global_fit_nrqcd(const std::string& outdir,
                       sdc::SDCType sdcType=sdc::SDCType::NLO,
                       const std::string& paramsSettingsFile="") {
-  auto likelihood = get_likelihood("./data", "../SDCs_Chung", sdcType);
+  auto likelihood = get_likelihood("./data", "../SDCs_Chung", outdir, sdcType);
 
   if (!paramsSettingsFile.empty()) {
     setParameters(likelihood, paramsSettingsFile);
@@ -145,6 +147,9 @@ void global_fit_nrqcd(const std::string& resultsFileName, const std::string& gra
   LikelihoodFitter fitter;
   fitter.Fit(likelihood);
   printResult(fitter, likelihood);
+
+  const auto resultsFileName = outdir + "/fit_results_nrqcd_global_fit.root";
+  const auto graphFileName = outdir + "/fit_graphs_and_models_nrqcd_global_fit.root";
 
   TFile* outFile = new TFile(resultsFileName.c_str(), "recreate");
   TTree* resultTree = new TTree("fit_result", "fit result information");

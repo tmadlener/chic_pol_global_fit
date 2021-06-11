@@ -14,9 +14,6 @@ int main(int argc, char* argv[]) {
   const auto paramsSetFile = parser.getOptionVal<std::string>("--paramsSettings", "");
   const auto sdcOrder = parser.getOptionVal<std::string>("--order", "NLO");
 
-  const std::string outFile = outdir + "/fit_results_nrqcd_global_fit.root";
-  const std::string graphFile = outdir + "/fit_graphs_and_models_nrqcd_global_fit.root";
-
   std::filesystem::create_directory(outdir);
   if (not paramsSetFile.empty()) {
     const auto paramsFileCopy = outdir + "/" + paramsSetFile;
@@ -28,7 +25,7 @@ int main(int argc, char* argv[]) {
 
   const auto order = asOrderEnum(sdcOrder);
 
-  global_fit_nrqcd(outFile, graphFile, order, paramsSetFile);
+  global_fit_nrqcd(outdir, order, paramsSetFile);
 
   return 0;
 }
