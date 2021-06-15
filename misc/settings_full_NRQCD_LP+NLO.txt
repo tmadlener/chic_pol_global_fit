@@ -1,18 +1,18 @@
-# Params settings file for running a 1S0 only fit at NLO
+# Params settings file for a full NRQCD fit
+# start param values from previous fit
 
 # j/psi
 fix l_3S1_1_jpsi 0
-set l_1S0_8_jpsi 0.01 0.5
-set l_r_3PJ_8_1S0_8_jpsi 1 1
-set l_r_3S1_8_1S0_8_jpsi 1 1
+set l_r_3PJ_8_1S0_8_jpsi 0 0.001
+set l_r_3S1_8_1S0_8_jpsi 0.0104 1.523e-3
+set l_1S0_8_jpsi 0.0282 1.281e-3
 
 # psip
 fix l_3S1_1_psip 0
-set l_1S0_8_psip 0.01 0.5
+fix l_rr_3PJ_8_1S0_8_psip_jpsi 1  # fix these to an arbitrary value to remove them from
+fix l_rr_3S1_8_1S0_8_psip_jpsi 1  # the free parameter list
+set l_1S0_8_psip 4.815e-3 2e-4
 
-# These double ratios should always be 1
-fix l_rr_3PJ_8_1S0_8_psip_jpsi 1
-fix l_rr_3S1_8_1S0_8_psip_jpsi 1
-
-set l_3S1_8_c0 0.007 0.02
-set l_3P0_1_c0 0.016 0.02
+# chic
+set l_3S1_8_c0 1.229e-3 8.620e-5
+set l_3P0_1_c0 7.911e-3 6.488e-4
