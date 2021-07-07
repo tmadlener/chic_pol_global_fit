@@ -6,6 +6,7 @@
 #include "TGraph.h"
 
 #include <array>
+#include <algorithm>
 #include <cmath>
 #include <fstream>
 #include <functional>
@@ -14,6 +15,7 @@
 #include <string>
 #include <type_traits>
 #include <vector>
+#include <iterator>
 
 namespace sdc {
 namespace detail {
@@ -247,7 +249,7 @@ public:
 
 private:
   std::vector<double> m_supports;
-  const size_t m_size;
+  size_t m_size;
   std::vector<std::vector<double>> m_values{};
 };
 
@@ -346,19 +348,21 @@ enum class SDCType {
 constexpr std::array<const char*, 3> SDCTypeNames = {"LP+NLO", "LO", "NLO"};
 
 /**
- * Read an SDC (LP + NLO) from a file
+ * Read an SDC from a "generic" tabulated file, where potentially multiple
+ * different SDCs are stored as rows of values where one corresponds to the pt
+ * value and others to different sdc values. Choose one column for pt and one
+ * for the values.
  */
-SDC read_from_file(std::string filename, SDCType sdcType = SDCType::LP_NLO) {
-  using util::to_index;
-
+SDC read_from_file(std::string filename, int sdcCol, int ptCol=0) {
   std::ifstream infile(filename);
   if (!infile) {
     std::cerr << "ERROR: Cannot open file \'" << filename << "\' to read SDC" << std::endl;
     std::exit(1); // TODO: Does this have to be fatal?
   }
 
-  std::cout << "Reading SDC from file \'" << filename << "\' using type \'" << SDCTypeNames[to_index(sdcType)]
-            << "\' ... ";
+  std::cout << "Reading SDC from file \'" << filename
+            << "\' using column " << sdcCol << " for the SDC values and column "
+            << ptCol << "for the pt values ...";
 
   std::string line;
   std::vector<double> points, values;
@@ -367,18 +371,28 @@ SDC read_from_file(std::string filename, SDCType sdcType = SDCType::LP_NLO) {
     if (line[0] == '#') continue;
 
     std::stringstream linestr{line};
-    // Assuming format: pT LP+NLP LO NLO
-    double p;
-    std::array<double, 3> vals;
-    linestr >> p >> vals[to_index(SDCType::LP_NLO)] >> vals[to_index(SDCType::LO)] >> vals[to_index(SDCType::NLO)];
+    std::vector<double> vals;
+    if (linestr) {
+      std::copy(std::istream_iterator<double>(linestr), std::istream_iterator<double>(), std::back_inserter(vals));
+    }
 
-    points.push_back(p);
-    values.push_back(vals[to_index(sdcType)]);
+    points.push_back(vals[ptCol]);
+    values.push_back(vals[sdcCol]);
   }
 
   std::cout << "(" << points.size() << " value pairs)\n";
 
   return SDC(std::move(points), std::move(values));
+}
+
+/**
+ * Read an SDC (LP + NLO) from a file
+ */
+SDC read_from_file(std::string filename, SDCType sdcType = SDCType::LP_NLO) {
+  using util::to_index;
+
+  // first column is pT, and sdc enum starts at 0 again, so we have to add 1
+  return read_from_file(filename, to_index(sdcType) + 1, 0);
 }
 
 /**
