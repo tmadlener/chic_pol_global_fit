@@ -68,6 +68,16 @@ public:
     }
   }
 
+  /**
+   * Get the i-th support (.first) and value (.second) point pair
+   */
+  std::pair<double, double> operator[](unsigned int i) const { return {m_supports[i], m_values[i]}; }
+
+  /**
+   * Get the number of points
+   */
+  size_t size() const { return m_size; }
+
   // Rule of 5
   SDC() = delete;
   SDC(const SDC&) = default;
@@ -362,7 +372,7 @@ SDC read_from_file(std::string filename, int sdcCol, int ptCol=0) {
 
   std::cout << "Reading SDC from file \'" << filename
             << "\' using column " << sdcCol << " for the SDC values and column "
-            << ptCol << "for the pt values ...";
+            << ptCol << " for the pt values ...";
 
   std::string line;
   std::vector<double> points, values;
