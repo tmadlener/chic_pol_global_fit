@@ -28,7 +28,7 @@ public:
     auto eigenvals = solver.eigenvalues();
     if ((eigenvals.array() < 0).any()) {
       std::cerr << "INFO: The covariance matrix has negative eigenvalues.\n"
-                << "Checking if this could just be due to numerical reasons\n";
+                << "Checking if this could just be due to numerical reasons...";
 
       for (int i = 0; i < eigenvals.rows(); ++i) {
         if (std::abs(eigenvals[i]) < 1e-8) {
@@ -37,8 +37,10 @@ public:
       }
 
       if ((eigenvals.array() < 0).any()) {
-        std::cerr << "WARNING: There are negative eigenvalues with absolute values > 1e-8.\n"
+        std::cerr << "\nWARNING: There are negative eigenvalues with absolute values > 1e-8.\n"
                   << "The covariance matrix is not positive definite!\n";
+      } else {
+        std::cerr << " All eigenvalues >= -1e-8.\n";
       }
 
     }
