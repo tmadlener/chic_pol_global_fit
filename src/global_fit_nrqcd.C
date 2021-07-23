@@ -44,6 +44,29 @@ void storeAllContributions(TFile* file, const sdc::StateSDCs& sdcs, const std::a
   }
 }
 
+GlobalLikelihoodNRQCD get_likelihood(std::string const& dataDir, std::string const& sdcDir,
+                                     std::string const& outdir,
+                                     double const lpFraction) {
+  const auto data = read_all_data(dataDir, 2); // pT/M >= 2
+  const auto psi_SDC = readPsiSDCs(sdcDir, lpFraction);
+  const auto chic1_SDC = readChic1SDCs(sdcDir, lpFraction);
+  const auto chic2_SDC = readChic2SDCs(sdcDir, lpFraction);
+
+  // Store the input SDCs for a bit of checking and potentially for plotting
+  // later as well
+  const auto sdcFileName = outdir + "/input_sdcs.root";
+  TFile* inputSDCFile = new TFile(sdcFileName.c_str(), "recreate");
+  storeAllContributions(inputSDCFile, psi_SDC, allPsiSDCs, "psi", PsiSDCsNames);
+  storeAllContributions(inputSDCFile, chic1_SDC, allChic1SDCs, "chic1", Chic1SDCsNames);
+  storeAllContributions(inputSDCFile, chic2_SDC, allChic2SDCs, "chic2", Chic2SDCsNames);
+
+  inputSDCFile->Write("", TObject::kWriteDelete);
+  inputSDCFile->Close();
+  delete inputSDCFile;
+
+  return GlobalLikelihoodNRQCD(std::move(data), std::move(psi_SDC), std::move(chic1_SDC), std::move(chic2_SDC));
+}
+
 GlobalLikelihoodNRQCD get_likelihood(std::string dataDir, std::string sdcDir,
                                      const std::string& outdir,
                                      sdc::SDCType sdcType = sdc::SDCType::LP_NLO) {
@@ -146,12 +169,21 @@ void setParameters(LLH& llh, const std::string& paramsSetFN) {
   }
 }
 
+#if DO_COMBINATION_FIT
+void global_fit_nrqcd(const std::string& outdir,
+                      const std::string& dataDir,
+                      const std::string& sdcDir,
+                      const double lpFraction,
+                      const std::string& paramsSettingsFile="") {
+  auto likelihood = get_likelihood(dataDir, sdcDir, outdir, lpFraction);
+#else
 void global_fit_nrqcd(const std::string& outdir,
                       const std::string& dataDir,
                       const std::string& sdcDir,
                       sdc::SDCType sdcType=sdc::SDCType::NLO,
                       const std::string& paramsSettingsFile="") {
   auto likelihood = get_likelihood(dataDir, sdcDir, outdir, sdcType);
+#endif
 
   if (!paramsSettingsFile.empty()) {
     setParameters(likelihood, paramsSettingsFile);

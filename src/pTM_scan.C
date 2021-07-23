@@ -1,7 +1,3 @@
-#ifndef NRQCD_FIT
-#define NRQCD_FIT 0
-#endif
-
 #if NRQCD_FIT
 #include "likelihood_nrqcd.h"
 #include "read_sdcs.h"
@@ -68,7 +64,11 @@ void pTM_scan(const std::string& fitResultsFile,
               const double ptMmin, const double ptMmax, const size_t nPoints, const size_t nScans,
 #if NRQCD_FIT
               const std::string& sdcDir,
+#if DO_COMBINATION_FIT
+              const bool storeParams=true, const double lpFraction=0.)
+#else
               const bool storeParams=true, sdc::SDCType order=sdc::SDCType::NLO)
+#endif // DO_COMBINATION_FIT
 #else
               const bool storeParams=true)
 #endif
@@ -81,10 +81,15 @@ void pTM_scan(const std::string& fitResultsFile,
   const MultivariateNormalDistribution<> multiVarNorm(params, cov);
 
 #if NRQCD_FIT
-
+#if DO_COMBINATION_FIT
+  GlobalLikelihoodNRQCD likelihood(readPsiSDCs(sdcDir, lpFraction),
+                                   readChic1SDCs(sdcDir, lpFraction),
+                                   readChic2SDCs(sdcDir, lpFraction));
+#else
   GlobalLikelihoodNRQCD likelihood(readPsiSDCs(sdcDir, order),
                                    readChic1SDCs(sdcDir, order),
                                    readChic2SDCs(sdcDir, order));
+#endif // DO_COMBINATION_FIT
   StoreVariables<GlobalLikelihoodNRQCD> storeVars(likelihood);
 #else
   GlobalLikelihood likelihood;
